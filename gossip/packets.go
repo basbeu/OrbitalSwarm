@@ -6,8 +6,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	"go.dedis.ch/cs438/hw3/gossip/types"
 )
 
 // GetFactory returns the Gossip factory
@@ -18,7 +16,6 @@ func GetFactory() GossipFactory {
 // GossipPacket defines the packet that gets encoded or deserialized from the
 // network.
 type GossipPacket struct {
-	Simple  *SimpleMessage  `json:"simple"`
 	Rumor   *RumorMessage   `json:"rumor"`
 	Status  *StatusPacket   `json:"status"`
 	Private *PrivateMessage `json:"private"`
@@ -28,17 +25,9 @@ type GossipPacket struct {
 // best not to give a pointer to the original packet, as it could create some
 // race.
 func (g GossipPacket) Copy() GossipPacket {
-	var simple *SimpleMessage
 	var rumor *RumorMessage
 	var status *StatusPacket
 	var private *PrivateMessage
-
-	if g.Simple != nil {
-		simple = new(SimpleMessage)
-		simple.OriginPeerName = g.Simple.OriginPeerName
-		simple.RelayPeerAddr = g.Simple.RelayPeerAddr
-		simple.Contents = g.Simple.Contents
-	}
 
 	if g.Rumor != nil {
 		rumor = new(RumorMessage)
@@ -71,13 +60,6 @@ func (g GossipPacket) Copy() GossipPacket {
 		Status:  status,
 		Private: private,
 	}
-}
-
-// SimpleMessage is a structure for the simple message
-type SimpleMessage struct {
-	OriginPeerName string `json:"originPeerName"`
-	RelayPeerAddr  string `json:"relayPeerAddr"`
-	Contents       string `json:"contents"`
 }
 
 // RumorMessage denotes of an actual message originating from a given Peer in the network.
@@ -126,20 +108,6 @@ type CallbackPacket struct {
 	Msg  GossipPacket
 }
 
-// File struct represent a local file indexed to be searchable by other peers
-type File struct {
-	Name     string
-	MetaHash string
-}
-
-// SearchResult is a reply to a keyword search, containing for a given filename result the
-// hash of the metafile and the chunks for that file that the peer who sent that reply stores.
-type SearchResult struct {
-	FileName string   `json:"filename"`
-	MetaHash []byte   `json:"metahash"`
-	ChunkMap []uint32 `json:"chunkmap"`
-}
-
 func (c CallbackPacket) String() string {
 	res := new(strings.Builder)
 	res.WriteString("CallbackPacket: ")
@@ -150,9 +118,6 @@ func (c CallbackPacket) String() string {
 	}
 	if c.Msg.Rumor != nil {
 		fmt.Fprintf(res, "Rumor: %v", *c.Msg.Rumor)
-	}
-	if c.Msg.Simple != nil {
-		fmt.Fprintf(res, "Simple: %v", *c.Msg.Simple)
 	}
 	if c.Msg.Status != nil {
 		fmt.Fprintf(res, "Status: %v", *c.Msg.Status)
@@ -188,9 +153,6 @@ type BaseGossiper interface {
 	// GetIdentifier returns the currently used identifier for outgoing messages from
 	// this gossiper.
 	GetIdentifier() string
-	// AddSimpleMessage takes a text that will be spread through the gossip network
-	// with the identifier of g. It returns the ID of the message
-	AddSimpleMessage(text string)
 	// AddMessage takes a text that will be spread through the gossip network
 	// with the identifier of g. It returns the ID of the message
 	AddMessage(text string) uint32

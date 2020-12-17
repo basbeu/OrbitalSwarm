@@ -14,9 +14,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -38,14 +35,12 @@ const (
 // the ui, dispatching responses and messages etc
 type Controller struct {
 	sync.Mutex
-	uiAddress         string
-	identifier        string
-	gossipAddress     string
-	gossiper          gossip.BaseGossiper
-	cliConn           net.Conn
-	messages          []CtrlMessage
-	searchMatches     []*gossip.File
-	searchMatchesLock sync.Mutex
+	uiAddress     string
+	identifier    string
+	gossipAddress string
+	gossiper      gossip.BaseGossiper
+	cliConn       net.Conn
+	messages      []CtrlMessage
 	// simpleMode: true if the gossiper should broadcast messages from clients as SimpleMessages
 	simpleMode bool
 
@@ -100,19 +95,6 @@ func (c *Controller) Run() {
 	r.Methods("GET").Path("/routing").HandlerFunc(c.GetRoutingTable)
 	r.Methods("POST").Path("/routing").HandlerFunc(c.AddRoute)
 
-	r.Methods("GET").Path("/share").HandlerFunc(c.GetSharedFiles)
-	r.Methods("GET").Path("/fullshare").HandlerFunc(c.GetFullSharedFiles)
-
-	r.Methods("POST").Path("/metafile").HandlerFunc(c.RetrieveMetaFile)
-
-	r.Methods("POST").Path("/downloadfile").HandlerFunc(c.DownloadFile)
-
-	r.Methods("POST").Path("/remotechunkspossession").HandlerFunc(c.RemoteChunksPossession)
-
-	r.Methods("POST").Path("/removechunkfromlocal").HandlerFunc(c.RemoveChunkFromLocal)
-
-	r.Methods("GET").Path("/search").HandlerFunc(c.GetMatchedSearches)
-
 	r.Methods("GET").Path("/address").HandlerFunc(c.GetLocalAddr)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
@@ -163,37 +145,18 @@ func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
 	if c.simpleMode {
 		c.gossiper.AddSimpleMessage(message.Contents)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
+	} else if message.Destination != "" {
+		// client message for a private message
+		c.gossiper.AddPrivateMessage(message.Contents, message.Destination, c.gossiper.GetIdentifier(), 10)
+		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
 	} else {
-		if message.Request != "" {
-			// client message for a data request
-			c.gossiper.DownloadFile(message.Destination, message.FileName, message.Request)
-		} else if message.Keywords != "" {
-			// split separate keywords into a slice
-			splitKeywords := strings.Split(message.Keywords, ",")
-			b, err := strconv.ParseUint(message.Budget, 10, 32)
-			if err != nil {
-				Logger.Err(err).Msg("cannot convert budget")
-				os.Exit(1)
-			}
-			c.gossiper.AddSearchMessage(c.gossiper.GetIdentifier(), b, splitKeywords)
-		} else if message.Destination != "" {
-			// client message for a private message
-			c.gossiper.AddPrivateMessage(message.Contents, message.Destination, c.gossiper.GetIdentifier(), 10)
-			c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
-		} else if message.Share != "" {
-			// client message for indexing and sharing a file
-			c.gossiper.IndexShares(message.Share)
-		} else {
-			// client message for regular text message
-			id := c.gossiper.AddMessage(message.Contents)
-			buf := make([]byte, 4)
-			binary.LittleEndian.PutUint32(buf, id)
-			w.Write(buf)
-			c.messages = append(c.messages, CtrlMessage{c.identifier, id, message.Contents})
-		}
-
+		// client message for regular text message
+		id := c.gossiper.AddMessage(message.Contents)
+		buf := make([]byte, 4)
+		binary.LittleEndian.PutUint32(buf, id)
+		w.Write(buf)
+		c.messages = append(c.messages, CtrlMessage{c.identifier, id, message.Contents})
 	}
-
 }
 
 // GET /node returns list of nodes as json encoded slice of string
@@ -250,160 +213,6 @@ func (c *Controller) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 	Logger.Info().Msg("GUI set identifier")
 
 	c.gossiper.SetIdentifier(id)
-}
-
-// GET /share returns the shared files' hashes
-func (c *Controller) GetSharedFiles(w http.ResponseWriter, r *http.Request) {
-	indexedFiles := c.gossiper.GetIndexedFiles()
-	var indexedMetahashes strings.Builder
-	for _, f := range indexedFiles {
-		indexedMetahashes.WriteString(f.MetaHash)
-		indexedMetahashes.WriteString("\n")
-	}
-	if _, err := w.Write([]byte(indexedMetahashes.String())); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// GET /fullshare returns the shared files' hashes
-// That would be a good idea to merge this one with GetSharedFiles. We need it
-// for the bingossiper.
-func (c *Controller) GetFullSharedFiles(w http.ResponseWriter, r *http.Request) {
-	indexedFiles := c.gossiper.GetIndexedFiles()
-	buf, err := json.Marshal(indexedFiles)
-	if err != nil {
-		Logger.Err(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(buf)
-	if err != nil {
-		Logger.Err(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// POST /metafile returns the metafile's content
-func (c *Controller) RetrieveMetaFile(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	dest := r.PostFormValue("dest")
-	if dest == "" {
-		Logger.Error().Msg("'dest' not found in the argument")
-		http.Error(w, "'dest' not found", http.StatusInternalServerError)
-		return
-	}
-
-	request := r.PostFormValue("request")
-	if request == "" {
-		Logger.Error().Msg("'request' not found in the argument")
-		http.Error(w, "'request' not found", http.StatusInternalServerError)
-		return
-	}
-
-	res, err := c.gossiper.RetrieveMetaFile(dest, request)
-	if err != nil {
-		Logger.Err(err).Msg("failed to get metafile from the gossiper")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(res)
-	if err != nil {
-		Logger.Err(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// POST /downloadfile download the file
-func (c *Controller) DownloadFile(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	dest := r.PostFormValue("dest")
-	if dest == "" {
-		Logger.Error().Msg("'dest' not found in the argument")
-		http.Error(w, "'dest' not found", http.StatusInternalServerError)
-		return
-	}
-
-	filename := r.PostFormValue("filename")
-	if filename == "" {
-		Logger.Error().Msg("'filename' not found in the argument")
-		http.Error(w, "'filename' not found", http.StatusInternalServerError)
-		return
-	}
-
-	request := r.PostFormValue("request")
-	if request == "" {
-		Logger.Error().Msg("'request' not found in the argument")
-		http.Error(w, "'request' not found", http.StatusInternalServerError)
-		return
-	}
-
-	c.gossiper.DownloadFile(dest, filename, request)
-}
-
-// POST /remotechunkspossession return the locally stored information
-func (c *Controller) RemoteChunksPossession(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	metaHash := r.PostFormValue("metaHash")
-	if metaHash == "" {
-		Logger.Error().Msg("'metaHash' not found in the argument")
-		http.Error(w, "'metaHash' not found", http.StatusInternalServerError)
-		return
-	}
-
-	chunks := c.gossiper.GetRemoteChunksPossession(metaHash)
-
-	buf, err := json.Marshal(chunks)
-	if err != nil {
-		Logger.Err(err).Msg("failed to marshal chunks")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(buf)
-	if err != nil {
-		Logger.Err(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// POST /removechunkfromlocal remove a locally stored chunk
-func (c *Controller) RemoveChunkFromLocal(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	chunkHash := r.PostFormValue("chunkHash")
-	if chunkHash == "" {
-		Logger.Error().Msg("'chunkHash' not found in the argument")
-		http.Error(w, "'chunkHash' not found", http.StatusInternalServerError)
-		return
-	}
-
-	c.gossiper.RemoveChunkFromLocal(chunkHash)
-}
-
-// GET /search returns ordered matched searches
-func (c *Controller) GetMatchedSearches(w http.ResponseWriter, r *http.Request) {
-	c.searchMatchesLock.Lock()
-	matches := c.searchMatches
-	c.searchMatchesLock.Unlock()
-
-	var matchesString strings.Builder
-	for _, m := range matches {
-		matchesString.WriteString(m.Name + " - " + m.MetaHash + "\n")
-	}
-
-	if _, err := w.Write([]byte(matchesString.String())); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }
 
 // GET /routing returns the routing table

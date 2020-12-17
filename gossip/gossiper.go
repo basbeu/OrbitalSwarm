@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"go.dedis.ch/cs438/hw3/gossip/types"
 	"go.dedis.ch/cs438/hw3/gossip/watcher"
+	"go.dedis.ch/cs438/hw3/paxos"
 	"go.dedis.ch/onet/v3/log"
 
 	"sync"
@@ -142,10 +142,6 @@ func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, nu
 	}
 
 	// Register handler
-	err = g.RegisterHandler(&SimpleMessage{})
-	if err != nil {
-		return nil, err
-	}
 	err = g.RegisterHandler(&RumorMessage{})
 	if err != nil {
 		return nil, err
@@ -292,7 +288,7 @@ func (g *Gossiper) Stop() {
 // GetBlocks returns all the blocks added so far. Key should be hexadecimal
 // representation of the block's hash. The first return is the hexadecimal
 // hash of the last block.
-func (g *Gossiper) GetBlocks() (string, map[string]types.Block) {
+func (g *Gossiper) GetBlocks() (string, map[string]paxos.Block) {
 	return g.naming.GetBlocks()
 }
 
@@ -355,28 +351,6 @@ func (g *Gossiper) trackRumor(msg *RumorMessage) (uint32, uint32) {
 	return ID, 1
 }
 
-// AddSimpleMessage implements gossip.BaseGossiper. It takes a text that will be
-// spread through the gossip network with the identifier of g.
-func (g *Gossiper) AddSimpleMessage(text string) {
-	// Logging
-	// log.Printf("CLIENT MESSAGE %s", text)
-	// log.Printf("PEERS %s", strings.Join(g.GetNodes(), ","))
-
-	msg := &GossipPacket{
-		Simple: &SimpleMessage{
-			OriginPeerName: g.identifier,
-			RelayPeerAddr:  g.address,
-			Contents:       text,
-		},
-	}
-
-	// Simply call handler
-	g.handler.HandlePacket(g, HandlingPacket{
-		data: msg,
-		addr: g.server.Address,
-	})
-}
-
 // AddPrivateMessage sends the message to the next hop.
 func (g *Gossiper) AddPrivateMessage(text, dest, origin string, hoplimit int) {
 	msg := &GossipPacket{
@@ -423,7 +397,7 @@ func (g *Gossiper) AddMessage(text string) uint32 {
 }
 
 // AddExtraMessage allow to send some paxos message
-func (g *Gossiper) AddExtraMessage(paxosMsg *types.ExtraMessage) uint32 {
+func (g *Gossiper) AddExtraMessage(paxosMsg *paxos.ExtraMessage) uint32 {
 	// Generate next ID
 	g.mutexNextID.Lock()
 	id := g.nextID

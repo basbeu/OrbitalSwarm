@@ -18,29 +18,6 @@ const ackMessageToSend = 1
 const ackMessageToReceive = 2
 const ackSynchronised = 2
 
-// Exec is the function that the gossiper uses to execute the handler for a SimpleMessage
-// processSimple processes a SimpleMessage as such:
-// - add message's relay address to the known peers
-// - update the relay field
-func (msg *SimpleMessage) Exec(g *Gossiper, addr *net.UDPAddr) error {
-	// Call the callback
-	if g.server.Address != addr {
-		g.callback(msg.OriginPeerName, GossipPacket{Simple: msg})
-	}
-
-	// Update route
-	g.updateRoute(msg.OriginPeerName, addr.String(), 0, true)
-
-	// Send a broadcast message to all others nodes except of sender
-	previousAddr := msg.RelayPeerAddr
-	msg.RelayPeerAddr = g.address
-
-	// Broadcast message to all other clients
-	g.BroadcastMessageExcept(GossipPacket{Simple: msg}, previousAddr)
-
-	return nil
-}
-
 // Exec is the function that the gossiper uses to execute the handler for a RumorMessage
 func (msg *RumorMessage) Exec(g *Gossiper, addr *net.UDPAddr) error {
 

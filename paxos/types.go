@@ -1,6 +1,6 @@
 // Package types contains the type messages for Paxos and TLC. We use a separate
 // package to avoid import cycles.
-package types
+package paxos
 
 import "crypto/sha256"
 
@@ -12,7 +12,7 @@ type ExtraMessage struct {
 	PaxosPromise *PaxosPromise
 	PaxosPropose *PaxosPropose
 	PaxosAccept  *PaxosAccept
-	TLC          *TLC
+	PaxosTLC     *PaxosTLC
 }
 
 // Copy performs a deep copy of extra message
@@ -21,7 +21,7 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 	var paxosPromise *PaxosPromise
 	var paxosPropose *PaxosPropose
 	var paxosAccept *PaxosAccept
-	var tlc *TLC
+	var tlc *PaxosTLC
 
 	if e.PaxosPrepare != nil {
 		paxosPrepare = new(PaxosPrepare)
@@ -51,9 +51,9 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 		paxosAccept.Value = *(e.PaxosAccept.Value.Copy())
 	}
 
-	if e.TLC != nil {
-		tlc = new(TLC)
-		tlc.Block = *e.TLC.Block.Copy()
+	if e.PaxosTLC != nil {
+		paxosTLC = new(PaxosTLC)
+		paxosTLC.Block = *e.PaxosTLC.Block.Copy()
 	}
 
 	return &ExtraMessage{
@@ -61,7 +61,7 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 		PaxosPromise: paxosPromise,
 		PaxosPropose: paxosPropose,
 		PaxosAccept:  paxosAccept,
-		TLC:          tlc,
+		PaxosTLC:     paxosTLC,
 	}
 }
 
@@ -102,7 +102,7 @@ type PaxosAccept struct {
 
 // TLC is the message sent by a node when it knows consensus has been reached
 // for that block.
-type TLC struct {
+type PaxosTLC struct {
 	Block Block
 }
 
