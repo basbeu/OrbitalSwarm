@@ -1,4 +1,4 @@
-module go.dedis.ch/cs438/hw3
+module go.dedis.ch/cs438/orbswarm
 
 go 1.14
 
