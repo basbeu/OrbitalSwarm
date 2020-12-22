@@ -1,25 +1,20 @@
 // ========== CS-438 orbitalswarm Skeleton ===========
 // *** Do not change this file ***
 
-package main
+package drone
 
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 
-	"go.dedis.ch/cs438/orbitalswarm/client"
+	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
-	"golang.org/x/xerrors"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
@@ -65,7 +60,7 @@ func NewController(identifier, uiAddress, gossipAddress string, simpleMode bool,
 		gossipAddress: gossipAddress,
 		simpleMode:    simpleMode,
 		gossiper:      g,
-		searchMatches: make([]*gossip.File, 0),
+		//searchMatches: make([]*gossip.File, 0),
 	}
 
 	g.RegisterCallback(c.NewMessage)
@@ -74,15 +69,15 @@ func NewController(identifier, uiAddress, gossipAddress string, simpleMode bool,
 
 // Run ...
 func (c *Controller) Run() {
-	logger := Logger.With().Timestamp().Str("role", "http proxy").Logger()
+	//logger := Logger.With().Timestamp().Str("role", "http proxy").Logger()
 
-	nextRequestID := func() string {
+	/*nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
+	}*/
 
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/message").HandlerFunc(c.GetMessage)
-	r.Methods("POST").Path("/message").HandlerFunc(c.PostMessage)
+	//r.Methods("POST").Path("/message").HandlerFunc(c.PostMessage)
 
 	r.Methods("GET").Path("/origin").HandlerFunc(c.GetDirectNode)
 
@@ -100,8 +95,8 @@ func (c *Controller) Run() {
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 
 	server := &http.Server{
-		Addr:    c.uiAddress,
-		Handler: tracing(nextRequestID)(logging(logger)(r)),
+		Addr: c.uiAddress,
+		//Handler: tracing(nextRequestID)(logging(logger)(r)),
 	}
 
 	err := server.ListenAndServe()
@@ -115,35 +110,35 @@ func (c *Controller) Run() {
 func (c *Controller) GetMessage(w http.ResponseWriter, r *http.Request) {
 	c.Lock()
 	defer c.Unlock()
-	Logger.Info().Msgf("These are the msgs %v", c.messages)
+	//Logger.Info().Msgf("These are the msgs %v", c.messages)
 	if err := json.NewEncoder(w).Encode(c.messages); err != nil {
-		Logger.Err(err)
+		//Logger.Err(err)
 		http.Error(w, "could not encode json", http.StatusInternalServerError)
 		return
 	}
-	Logger.Info().Msg("GUI request for the messages received by the gossiper")
+	//Logger.Info().Msg("GUI request for the messages received by the gossiper")
 }
 
 // POST /message with text in the body as raw string
-func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
-	Logger.Info().Msg("POSTING MESSAGE")
+/*func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
+	//Logger.Info().Msg("POSTING MESSAGE")
 	c.Lock()
 	defer c.Unlock()
 	text, ok := readString(w, r)
 	if !ok {
-		Logger.Err(xerrors.New("failed to read string"))
+		//Logger.Err(xerrors.New("failed to read string"))
 		return
 	}
 	message := client.ClientMessage{}
 	err := json.Unmarshal([]byte(text), &message)
 	if err != nil {
-		Logger.Err(err)
+		//Logger.Err(err)
 		return
 	}
-	Logger.Info().Msgf("the controller received a UI message: %+v", message)
+	//Logger.Info().Msgf("the controller received a UI message: %+v", message)
 
 	if c.simpleMode {
-		c.gossiper.AddSimpleMessage(message.Contents)
+		//c.gossiper.AddSimpleMessage(message.Contents)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
 	} else if message.Destination != "" {
 		// client message for a private message
@@ -157,13 +152,13 @@ func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
 		w.Write(buf)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, id, message.Contents})
 	}
-}
+}*/
 
 // GET /node returns list of nodes as json encoded slice of string
 func (c *Controller) GetNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
-		Logger.Err(err)
+		//Logger.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -173,7 +168,7 @@ func (c *Controller) GetNode(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetDirectNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetDirectNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
-		Logger.Err(err)
+		//Logger.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -185,7 +180,7 @@ func (c *Controller) PostNode(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	Logger.Info().Msgf("GUI add node %s", text)
+	//Logger.Info().Msgf("GUI add node %s", text)
 	if err := c.gossiper.AddAddresses(text); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -199,7 +194,7 @@ func (c *Controller) GetIdentifier(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	Logger.Info().Msg("GUI identifier request")
+	//Logger.Info().Msg("GUI identifier request")
 }
 
 // POST /id reads the identifier as a raw string in the body and sets the
@@ -210,7 +205,7 @@ func (c *Controller) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Logger.Info().Msg("GUI set identifier")
+	//Logger.Info().Msg("GUI set identifier")
 
 	c.gossiper.SetIdentifier(id)
 }
@@ -219,7 +214,7 @@ func (c *Controller) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
 	routing := c.gossiper.GetRoutingTable()
 	if err := json.NewEncoder(w).Encode(routing); err != nil {
-		Logger.Err(err)
+		//Logger.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -229,18 +224,18 @@ func (c *Controller) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) AddRoute(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		Logger.Err(err).Msg("failed to parse form")
+		//Logger.Err(err).Msg("failed to parse form")
 	}
 
 	peerName := r.PostFormValue("peerName")
 	if peerName == "" {
-		Logger.Error().Msg("peerName is empty")
+		//Logger.Error().Msg("peerName is empty")
 		return
 	}
 
 	nextHop := r.PostFormValue("nextHop")
 	if nextHop == "" {
-		Logger.Error().Msg("nextHop is empty")
+		//Logger.Error().Msg("nextHop is empty")
 		return
 	}
 
@@ -262,60 +257,38 @@ func (c *Controller) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) NewMessage(origin string, msg gossip.GossipPacket) {
 	c.Lock()
 	defer c.Unlock()
+	if msg.Rumor != nil {
+		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
+			msg.Rumor.ID, msg.Rumor.Text})
+	}
 
-	if msg.SearchReply != nil {
-		results := msg.SearchReply.Results
-		if len(results) == 1 {
-			Logger.Info().Msg("new search result match received")
+	//Logger.Info().Msgf("messages %v", c.messages)
 
-			res := results[0]
-			fname := res.FileName
-			metahash := hex.EncodeToString(res.MetaHash)
-			newFile := &gossip.File{Name: fname, MetaHash: metahash}
-
-			c.searchMatchesLock.Lock()
-			c.searchMatches = append(c.searchMatches, newFile)
-			c.searchMatchesLock.Unlock()
-		}
-	} else {
-
-		if msg.Rumor != nil {
-			c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
-				msg.Rumor.ID, msg.Rumor.Text})
-		}
-		if msg.Simple != nil {
-			c.messages = append(c.messages, CtrlMessage{msg.Simple.OriginPeerName,
-				0, msg.Simple.Contents})
+	if c.hookURL != nil {
+		cp := gossip.CallbackPacket{
+			Addr: origin,
+			Msg:  msg,
 		}
 
-		Logger.Info().Msgf("messages %v", c.messages)
+		msgBuf, err := json.Marshal(cp)
+		if err != nil {
+			//Logger.Err(err).Msg("failed to marshal packet")
+			return
+		}
 
-		if c.hookURL != nil {
-			cp := gossip.CallbackPacket{
-				Addr: origin,
-				Msg:  msg,
-			}
+		req := &http.Request{
+			Method: "POST",
+			URL:    c.hookURL,
+			Header: map[string][]string{
+				"Content-Type": {"application/json; charset=UTF-8"},
+			},
+			Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
+		}
 
-			msgBuf, err := json.Marshal(cp)
-			if err != nil {
-				Logger.Err(err).Msg("failed to marshal packet")
-				return
-			}
-
-			req := &http.Request{
-				Method: "POST",
-				URL:    c.hookURL,
-				Header: map[string][]string{
-					"Content-Type": {"application/json; charset=UTF-8"},
-				},
-				Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
-			}
-
-			Logger.Info().Msgf("sending a post callback to %s", c.hookURL)
-			_, err = http.DefaultClient.Do(req)
-			if err != nil {
-				Logger.Err(err).Msgf("failed to call callback to %s", c.hookURL)
-			}
+		//Logger.Info().Msgf("sending a post callback to %s", c.hookURL)
+		_, err = http.DefaultClient.Do(req)
+		if err != nil {
+			//Logger.Err(err).Msgf("failed to call callback to %s", c.hookURL)
 		}
 	}
 }
