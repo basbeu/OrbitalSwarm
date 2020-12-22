@@ -8,6 +8,10 @@ type Vec3d struct {
 	z float64
 }
 
+func NewVec3d(x, y, z float64) Vec3d {
+	return Vec3d{x, y, z}
+}
+
 func (v Vec3d) X() float64 {
 	return v.x
 }

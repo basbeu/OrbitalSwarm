@@ -4,7 +4,6 @@
 package drone
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -12,7 +11,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -56,8 +54,6 @@ type Drone struct {
 	messages      []CtrlMessage
 	naming        paxos.Naming
 	position      utils.Vec3d
-
-	HookURL *url.URL
 }
 
 type CtrlMessage struct {
@@ -70,14 +66,16 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(identifier, uiAddress, gossipAddress string,
-	g gossip.BaseGossiper, addresses ...string) *Drone {
+	g gossip.BaseGossiper, addresses []string, position utils.Vec3d) *Drone {
 
 	c := &Drone{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
 		gossiper:      g,
+		position:      position,
 	}
+	g.AddAddresses(addresses...)
 
 	g.RegisterCallback(c.HandleGossipMessage)
 	return c
@@ -288,34 +286,6 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 	}
 
 	log.Info().Msgf("messages %v", c.messages)
-
-	if c.HookURL != nil {
-		cp := gossip.CallbackPacket{
-			Addr: origin,
-			Msg:  msg,
-		}
-
-		msgBuf, err := json.Marshal(cp)
-		if err != nil {
-			log.Err(err).Msg("failed to marshal packet")
-			return
-		}
-
-		req := &http.Request{
-			Method: "POST",
-			URL:    c.HookURL,
-			Header: map[string][]string{
-				"Content-Type": {"application/json; charset=UTF-8"},
-			},
-			Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
-		}
-
-		log.Info().Msgf("sending a post callback to %s", c.HookURL)
-		_, err = http.DefaultClient.Do(req)
-		if err != nil {
-			log.Err(err).Msgf("failed to call callback to %s", c.HookURL)
-		}
-	}
 }
 
 func readString(w http.ResponseWriter, r *http.Request) (string, bool) {
