@@ -13,19 +13,26 @@ type Hub struct {
 	// Inbound messages from the clients.
 	broadcast chan []byte
 
+	// Inbound messages from the clients.
+	orders chan []byte
+
 	// Register requests from the clients.
 	register chan *Client
 
 	// Unregister requests from clients.
 	unregister chan *Client
+
+	// Handler for the gossiper
+	handler chan []byte
 }
 
-func newHub() *Hub {
+func newHub(handler chan []byte) *Hub {
 	return &Hub{
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+		handler:    handler,
 	}
 }
 
@@ -39,6 +46,8 @@ func (h *Hub) run() {
 				delete(h.clients, client)
 				close(client.send)
 			}
+		case order := <-h.orders:
+			h.handler <- order
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {

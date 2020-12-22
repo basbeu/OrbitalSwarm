@@ -51,7 +51,6 @@ func main() {
 	gossipAddr := flag.String("gossipAddr", defaultGossipAddr, "ip:port for gossip communication with peers")
 	ownName := flag.String("name", defaultName, "identifier used in the chat")
 	peers := flag.String("peers", "", "peer addresses used for bootstrap")
-	broadcastMode := flag.Bool("broadcast", false, "run gossiper in broadcast mode")
 	hookURL := flag.String("hookURL", "", "A URL that is called each time a new message comes, for example http://127.0.0.1:4000/callback")
 	watchInURL := flag.String("watchInURL", "", "A URL that is called each time the watcher notifies for an incoming message, for example http://127.0.0.1:4000/watchIn")
 	watchOutURL := flag.String("watchOutURL", "", "A URL that is called each time the watcher notifies for an outgoing message, for example http://127.0.0.1:4000/watchOut")
@@ -87,7 +86,7 @@ func main() {
 	}
 
 	// controller := NewController(*ownName, UIAddress, gossipAddress, *broadcastMode, g, bootstrapAddr...)
-	controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, *broadcastMode, g, bootstrapAddr...)
+	controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
 
 	if *hookURL != "" {
 		parsedURL, err := url.Parse(*hookURL)
