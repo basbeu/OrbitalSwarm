@@ -1,8 +1,10 @@
-package gossip
+package paxos
 
 import (
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/extramessage"
+	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -29,14 +31,14 @@ type Paxos struct {
 	proposedID   int
 	state        int
 	count        int
-	value        *Block
+	value        *extramessage.Block
 	chanMajority chan bool
 
 	// chain BlockChain
 	latestPrepareID     int
 	latestAcceptedID    int
 	acceptedCount       int
-	latestAcceptedValue Block
+	latestAcceptedValue extramessage.Block
 
 	learnerCount int
 	learnerData  map[int]int
@@ -66,7 +68,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 
 		latestPrepareID:     -1,
 		latestAcceptedID:    -1,
-		latestAcceptedValue: Block{},
+		latestAcceptedValue: extramessage.Block{},
 
 		learnerCount: 0,
 		learnerData:  make(map[int]int),
@@ -75,7 +77,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 	}
 }
 
-func (p *Paxos) propose(g *Gossiper, block *Block) {
+func (p *Paxos) propose(g *gossip.Gossiper, block *extramessage.Block) {
 	go func() {
 		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
 		if p.value == nil {
@@ -89,8 +91,8 @@ func (p *Paxos) propose(g *Gossiper, block *Block) {
 			// log.Printf("%s Propose value %s", g.identifier, p.value.Filename)
 
 			// Phase 1
-			g.AddExtraMessage(&ExtraMessage{
-				PaxosPrepare: &PaxosPrepare{
+			g.AddExtraMessage(&extramessage.ExtraMessage{
+				PaxosPrepare: &extramessage.PaxosPrepare{
 					PaxosSeqID: p.paxosSequenceID,
 					ID:         id,
 				},
@@ -117,8 +119,8 @@ func (p *Paxos) propose(g *Gossiper, block *Block) {
 
 			// Phase 2
 			log.Printf("Enter phase 2")
-			g.AddExtraMessage(&ExtraMessage{
-				PaxosPropose: &PaxosPropose{
+			g.AddExtraMessage(&extramessage.ExtraMessage{
+				PaxosPropose: &extramessage.PaxosPropose{
 					PaxosSeqID: p.paxosSequenceID,
 					ID:         id,
 					Value:      *p.value,
@@ -150,7 +152,7 @@ func (p *Paxos) stop() {
 	close(p.chanEnd)
 }
 
-func (p *Paxos) handle(g *Gossiper, msg *ExtraMessage) *Block {
+func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *extramessage.Block {
 	// log.Printf("MANAGE handle")
 
 	// Upon promise
@@ -172,7 +174,7 @@ func (p *Paxos) handle(g *Gossiper, msg *ExtraMessage) *Block {
 
 // --- Phase 1 ---
 
-func (p *Paxos) uponPaxosPrepare(g *Gossiper, msg *PaxosPrepare) {
+func (p *Paxos) uponPaxosPrepare(g *gossip.Gossiper, msg *extramessage.PaxosPrepare) {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded prepare %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return // Discard
@@ -184,19 +186,19 @@ func (p *Paxos) uponPaxosPrepare(g *Gossiper, msg *PaxosPrepare) {
 		// log.Printf("Accept prepare %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		p.latestPrepareID = msg.ID
 		if p.proposedID != msg.ID {
-			g.AddExtraMessage(&ExtraMessage{
-				PaxosPromise: &PaxosPromise{
+			g.AddExtraMessage(&extramessage.ExtraMessage{
+				PaxosPromise: &extramessage.PaxosPromise{
 					PaxosSeqID: p.paxosSequenceID,
 					IDp:        msg.ID,
 					IDa:        -1,
-					Value:      Block{},
+					Value:      extramessage.Block{},
 				},
 			})
 		}
 	} else if p.proposedID != msg.ID {
 		// Send previously accepted value
-		g.AddExtraMessage(&ExtraMessage{
-			PaxosPromise: &PaxosPromise{
+		g.AddExtraMessage(&extramessage.ExtraMessage{
+			PaxosPromise: &extramessage.PaxosPromise{
 				PaxosSeqID: p.paxosSequenceID,
 				IDp:        msg.ID,
 				IDa:        p.latestAcceptedID,
@@ -206,7 +208,7 @@ func (p *Paxos) uponPaxosPrepare(g *Gossiper, msg *PaxosPrepare) {
 	}
 }
 
-func (p *Paxos) uponPaxosPromise(g *Gossiper, msg *PaxosPromise) {
+func (p *Paxos) uponPaxosPromise(g *gossip.Gossiper, msg *extramessage.PaxosPromise) {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded promise %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return // Discard
@@ -229,7 +231,7 @@ func (p *Paxos) uponPaxosPromise(g *Gossiper, msg *PaxosPromise) {
 
 // --- Phase 2 ---
 
-func (p *Paxos) uponPaxosPropose(g *Gossiper, msg *PaxosPropose) {
+func (p *Paxos) uponPaxosPropose(g *gossip.Gossiper, msg *extramessage.PaxosPropose) {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded propose %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return // Discard
@@ -242,8 +244,8 @@ func (p *Paxos) uponPaxosPropose(g *Gossiper, msg *PaxosPropose) {
 
 		if p.proposedID != msg.ID {
 			// Send to all an accept response
-			g.AddExtraMessage(&ExtraMessage{
-				PaxosAccept: &PaxosAccept{
+			g.AddExtraMessage(&extramessage.ExtraMessage{
+				PaxosAccept: &extramessage.PaxosAccept{
 					PaxosSeqID: msg.PaxosSeqID,
 					ID:         msg.ID,
 					Value:      msg.Value,
@@ -253,7 +255,7 @@ func (p *Paxos) uponPaxosPropose(g *Gossiper, msg *PaxosPropose) {
 	}
 }
 
-func (p *Paxos) uponPaxosAccept(g *Gossiper, msg *PaxosAccept) *Block {
+func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) *extramessage.Block {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded accept %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return nil // Discard

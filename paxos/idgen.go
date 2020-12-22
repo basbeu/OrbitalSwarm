@@ -1,4 +1,4 @@
-package gossip
+package paxos
 
 // UniqueIDGenerator describes a primitive to generate unique monotonically
 // increasing sequence number for proposers

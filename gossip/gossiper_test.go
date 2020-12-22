@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.dedis.ch/cs438/orbitalswarm/gossip/types"
 )
 
 var factory = GetFactory()

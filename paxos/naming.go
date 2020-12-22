@@ -1,10 +1,12 @@
-package gossip
+package paxos
 
 import (
 	"encoding/hex"
 	"fmt"
 	"sync"
 
+	"go.dedis.ch/cs438/orbitalswarm/extramessage"
+	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -36,7 +38,7 @@ func NewNaming(numParticipant int, nodeIndex int, paxosRetry int) *Naming {
 	}
 }
 
-func (n *Naming) propose(g *Gossiper, metahash string, filename string) (string, error) {
+func (n *Naming) propose(g *gossip.Gossiper, metahash string, filename string) (string, error) {
 	hash, err := hex.DecodeString(metahash)
 	if err != nil {
 		return "", err
@@ -72,7 +74,7 @@ func (n *Naming) propose(g *Gossiper, metahash string, filename string) (string,
 	return <-prop.done, nil
 }
 
-func (n *Naming) GetBlocks() (string, map[string]Block) {
+func (n *Naming) GetBlocks() (string, map[string]extramessage.Block) {
 	return n.blockChain.GetBlocks()
 }
 
@@ -89,7 +91,7 @@ func (n *Naming) getFiles() bool {
 	return false
 }
 
-func (n *Naming) handleExtraMessage(g *Gossiper, msg *ExtraMessage) {
+func (n *Naming) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
 	block := n.blockChain.handleExtraMessage(g, msg)
 	if block != nil {
 		metahash := hex.EncodeToString(block.Metahash)

@@ -16,6 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/paxos"
+	"go.dedis.ch/cs438/orbitalswarm/utils"
+
 	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"golang.org/x/xerrors"
@@ -51,6 +54,8 @@ type Drone struct {
 	gossiper      gossip.BaseGossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
+	naming        paxos.Naming
+	position      utils.Vec3d
 
 	HookURL *url.URL
 }
@@ -74,7 +79,7 @@ func NewDrone(identifier, uiAddress, gossipAddress string,
 		gossiper:      g,
 	}
 
-	g.RegisterCallback(c.NewMessage)
+	g.RegisterCallback(c.HandleGossipMessage)
 	return c
 }
 
@@ -263,10 +268,17 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewMessage ...
-func (c *Drone) NewMessage(origin string, msg gossip.GossipPacket) {
+func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 	c.Lock()
 	defer c.Unlock()
 	if msg.Rumor != nil {
+		if msg.Rumor.Extra != nil {
+			if msg.Rumor.Extra.SwarmInit != nil {
+				//Begin mapping phase
+			} else {
+				//Handle Paxos
+			}
+		}
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
 			msg.Rumor.ID, msg.Rumor.Text})
 	}

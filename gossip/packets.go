@@ -1,11 +1,13 @@
-// ========== CS-438 orbitalswarm Skeleton ===========
-// Define the packet structs here.
 package gossip
+
+// ========== CS-438 orbitalswarm Skeleton ===========
 
 import (
 	"context"
 	"fmt"
 	"strings"
+
+	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 )
 
 // GetFactory returns the Gossip factory
@@ -67,7 +69,7 @@ type RumorMessage struct {
 	ID     uint32 `json:"id"`
 	Text   string `json:"text"`
 
-	Extra *ExtraMessage `json:"extra"`
+	Extra *extramessage.ExtraMessage `json:"extra"`
 }
 
 // StatusPacket is sent as a status of the current local state of messages seen
