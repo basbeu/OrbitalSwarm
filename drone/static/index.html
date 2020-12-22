@@ -42,12 +42,6 @@
             <div class="row top-buffer">
                 <label class="text-center" for="identifier">List of Nodes</label>
                 <ul class="nav-node list-group" id="nodebox">
-                    <!--<li class="list-group-item">-->
-                        <!--<p class="list-group-item-text">Node 1 address</p>-->
-                    <!--</li>-->
-                    <!--<li class="list-group-item">-->
-                        <!--<p class="list-group-item-text">Node 2 address</p>-->
-                    <!--</li>-->
                 </ul>
                 <div class="divider"></div>
                 <form>
@@ -70,14 +64,6 @@
         <div class="col-md-9">
             <div class="row">
                 <ul class="nav list-group" id="chatbox">
-                    <!--<li class="list-group-item">-->
-                        <!--&lt;!&ndash;<h4 class="list-group-item-heading">First List Group Item Heading</h4>&ndash;&gt;-->
-                        <!--<p class="list-group-item-text">List Group Item Text</p>-->
-                    <!--</li>-->
-                    <!--<li class="list-group-item">-->
-                        <!--&lt;!&ndash;<h4 class="list-group-item-heading">Second List Group Item Heading</h4>&ndash;&gt;-->
-                        <!--<p class="list-group-item-text">List Group Item Text</p>-->
-                    <!--</li>-->
                 </ul>
             </div>
             <form>
@@ -99,55 +85,7 @@
                     <button type="submit" id="submitprivate" class="col-md-2 btn btn-primary">Send Private</button>
                 </div>
             </form>
-            <hr>
-            <form>
-                <div class="form-group row">
-                    <div class="col-md-10">
-                        <textarea class="form-control" id="sharedfiles" rows="2" placeholder="No files shared yet..." disabled></textarea>
-                    </div>                    
-                    <!-- <button type="submit" id="submitprivate" class="col-md-2 btn btn-primary">Share Files</button> -->
-                    <input type="file" class="col-md-2" id="share_file"/>
-                    <script>
-                        $("#share_file").change(function(){
-                            fname = this.value.replace("C:\\fakepath\\", "")
-                            fpath = "./GUIShare/" + fname
-                            jsonvalue = JSON.stringify({share : fpath})
-                            alert("Shared a file - " + fname);
-                            $.post("/message", jsonvalue);
-                            $.get("/share", function(shared) {
-                                if (shared !== null) {
-                                    document.getElementById('sharedfiles').innerHTML = shared
-                                }
-                            });
-                        });
-                    </script>
-                </div>
-            </form>
-            <hr>
-            <form>
-                <div class="form-group row">
-                    <div class="col-md-10">
-                        <textarea class="form-control" id="download_destination" rows="1" cols="1" placeholder="Download Destination"></textarea>
-                        <textarea class="form-control" id="download_filename" rows="1" placeholder="Save As..."></textarea>
-                        <textarea class="form-control" id="download_hash" rows="1" placeholder="Download Hash"></textarea>
-                    </div>                    
-                    <button type="submit" id="submitdownload" class="col-md-2 btn btn-primary">Download</button>
-                </div>
-            </form>
-            <hr>
-            <form>
-                <div class="form-group row">
-                    <div class="col-md-10">
-                        <textarea class="form-control" id="search_keywords" rows="1" cols="1" placeholder="Keywords (comma separated values)"></textarea>
-                        <textarea class="form-control" id="search_budget" rows="1" placeholder="Search Budget (optional)"></textarea>
-                        <textarea class="form-control" id="matched_searches" rows="2" placeholder="No matches yet..." disabled></textarea>
-                    </div>                    
-                    <button type="submit" id="submitsearch" class="col-md-2 btn btn-primary">Search</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
-
-
 </html>
