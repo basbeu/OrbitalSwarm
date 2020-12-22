@@ -6,16 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 
-	"go.dedis.ch/cs438/hw3/gossip/watcher"
-	"go.dedis.ch/cs438/hw3/paxos"
+	"go.dedis.ch/cs438/orbitalswarm/gossip/watcher"
 	"go.dedis.ch/onet/v3/log"
 
 	"sync"
@@ -249,22 +246,6 @@ func (g *Gossiper) Run(ready chan struct{}) {
 		}()
 	}
 
-	// Index files in DownloadedFiles
-	go func() {
-		files, err := ioutil.ReadDir(g.rootDownloadedFiles)
-		if err != nil {
-			return
-		}
-		var strFiles []string
-		for _, f := range files {
-			strFiles = append(strFiles, f.Name())
-		}
-
-		if len(strFiles) > 0 {
-			g.IndexShares(strings.Join(strFiles, ","))
-		}
-	}()
-
 	// Connect close handling to handler close event
 	handlingFinished <- <-handlerClosed
 }
@@ -288,7 +269,7 @@ func (g *Gossiper) Stop() {
 // GetBlocks returns all the blocks added so far. Key should be hexadecimal
 // representation of the block's hash. The first return is the hexadecimal
 // hash of the last block.
-func (g *Gossiper) GetBlocks() (string, map[string]paxos.Block) {
+func (g *Gossiper) GetBlocks() (string, map[string]Block) {
 	return g.naming.GetBlocks()
 }
 
@@ -397,7 +378,7 @@ func (g *Gossiper) AddMessage(text string) uint32 {
 }
 
 // AddExtraMessage allow to send some paxos message
-func (g *Gossiper) AddExtraMessage(paxosMsg *paxos.ExtraMessage) uint32 {
+func (g *Gossiper) AddExtraMessage(paxosMsg *ExtraMessage) uint32 {
 	// Generate next ID
 	g.mutexNextID.Lock()
 	id := g.nextID

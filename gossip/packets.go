@@ -1,4 +1,4 @@
-// ========== CS-438 HW3 Skeleton ===========
+// ========== CS-438 orbitalswarm Skeleton ===========
 // Define the packet structs here.
 package gossip
 
@@ -55,7 +55,6 @@ func (g GossipPacket) Copy() GossipPacket {
 	}
 
 	return GossipPacket{
-		Simple:  simple,
 		Rumor:   rumor,
 		Status:  status,
 		Private: private,
@@ -68,7 +67,7 @@ type RumorMessage struct {
 	ID     uint32 `json:"id"`
 	Text   string `json:"text"`
 
-	Extra *types.ExtraMessage `json:"extra"`
+	Extra *ExtraMessage `json:"extra"`
 }
 
 // StatusPacket is sent as a status of the current local state of messages seen
@@ -134,8 +133,7 @@ type NewMessageCallback func(origin string, message GossipPacket)
 // GossipFactory provides the primitive to instantiate a new Gossiper
 type GossipFactory interface {
 	New(address, identifier string, antiEntropy int, routeTimer int,
-		rootSharedData string, rootDownloadedFiles string, numParticipant int,
-		nodeIndex, paxosRetry int) (BaseGossiper, error)
+		numParticipant int, nodeIndex, paxosRetry int) (BaseGossiper, error)
 }
 
 // BaseGossiper ...
@@ -183,5 +181,5 @@ type BaseGossiper interface {
 	// GetBlocks returns all the blocks added so far. Key should be hexadecimal
 	// representation of the block's hash. The first return is the hexadecimal
 	// hash of the last block.
-	GetBlocks() (string, map[string]types.Block)
+	GetBlocks() (string, map[string]Block)
 }

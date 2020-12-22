@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"go.dedis.ch/cs438/hw3/paxos"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -73,7 +72,7 @@ func (n *Naming) propose(g *Gossiper, metahash string, filename string) (string,
 	return <-prop.done, nil
 }
 
-func (n *Naming) GetBlocks() (string, map[string]paxos.Block) {
+func (n *Naming) GetBlocks() (string, map[string]Block) {
 	return n.blockChain.GetBlocks()
 }
 
@@ -90,7 +89,7 @@ func (n *Naming) getFiles() bool {
 	return false
 }
 
-func (n *Naming) handleExtraMessage(g *Gossiper, msg *paxos.ExtraMessage) {
+func (n *Naming) handleExtraMessage(g *Gossiper, msg *ExtraMessage) {
 	block := n.blockChain.handleExtraMessage(g, msg)
 	if block != nil {
 		metahash := hex.EncodeToString(block.Metahash)

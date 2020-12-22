@@ -1,9 +1,10 @@
-module go.dedis.ch/cs438/orbswarm
+module go.dedis.ch/cs438/orbitalswarm
 
 go 1.14
 
 require (
 	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/websocket v1.4.0
 	github.com/rs/zerolog v1.20.0
 	github.com/stretchr/stew v0.0.0-20130812190256-80ef0842b48b
 	github.com/stretchr/testify v1.5.1
