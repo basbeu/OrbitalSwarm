@@ -68,26 +68,6 @@ type Gossiper struct {
 	timerRouteRumor     *time.Ticker
 	chanAntiEntropyStop chan bool
 	timerAntiEntropy    *time.Ticker
-
-	// Folder to store data about indexed files (comes from -sharedir)
-	rootSharedData string
-	// Folder to store downloaded files (comes from -downdir)
-	rootDownloadedFiles string
-
-	chunks        map[string][]byte
-	waitingChunks map[string]chan bool
-
-	// Origin -> MetaHash -> filename
-	searchIndexes map[string]map[string]string
-	// MetaHash -> NodeID -> ChunksIds
-	searchResults map[string]map[string][]uint32
-	// Signal some news results
-	waitingSearch chan bool
-
-	searchRequests map[string]time.Time
-
-	naming       *Naming
-	indexedFiles map[string]string
 }
 
 // NewGossiper returns a Gossiper that is able to listen to the given address
@@ -134,8 +114,6 @@ func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, nu
 		chanAntiEntropyStop: make(chan bool, 1),
 
 		nodes: make(map[string]*net.UDPAddr),
-
-		naming: NewNaming(numParticipant, nodeIndex, paxosRetry),
 	}
 
 	// Register handler
@@ -264,13 +242,6 @@ func (g *Gossiper) Stop() {
 	g.handler.Stop()
 	g.server.Stop()
 	// log.Printf("Gossiper closed gracefully")
-}
-
-// GetBlocks returns all the blocks added so far. Key should be hexadecimal
-// representation of the block's hash. The first return is the hexadecimal
-// hash of the last block.
-func (g *Gossiper) GetBlocks() (string, map[string]Block) {
-	return g.naming.GetBlocks()
 }
 
 func (g *Gossiper) updateRoute(destination, nextHop string, lastID uint32, officialDsdvUpdate bool) {

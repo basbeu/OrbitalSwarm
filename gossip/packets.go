@@ -178,8 +178,4 @@ type BaseGossiper interface {
 	GetRoutingTable() map[string]*RouteStruct
 	// GetLocalAddr returns the local address (ip:port) used for sending and receiving packets to/from the network.
 	GetLocalAddr() string
-	// GetBlocks returns all the blocks added so far. Key should be hexadecimal
-	// representation of the block's hash. The first return is the hexadecimal
-	// hash of the last block.
-	GetBlocks() (string, map[string]Block)
 }
