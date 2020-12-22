@@ -51,8 +51,6 @@ type Drone struct {
 	gossiper      gossip.BaseGossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
-	// simpleMode: true if the gossiper should broadcast messages from clients as SimpleMessages
-	simpleMode bool
 
 	HookURL *url.URL
 }
@@ -66,14 +64,13 @@ type CtrlMessage struct {
 // NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewDrone(identifier, uiAddress, gossipAddress string, simpleMode bool,
+func NewDrone(identifier, uiAddress, gossipAddress string,
 	g gossip.BaseGossiper, addresses ...string) *Drone {
 
 	c := &Drone{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
-		simpleMode:    simpleMode,
 		gossiper:      g,
 	}
 
@@ -151,10 +148,7 @@ func (c *Drone) PostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msgf("the controller received a UI message: %+v", message)
 
-	if c.simpleMode {
-		//c.gossiper.AddSimpleMessage(message.Contents)
-		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
-	} else if message.Destination != "" {
+	if message.Destination != "" {
 		// client message for a private message
 		fmt.Println("SEND PRIVATE")
 		c.gossiper.AddPrivateMessage(message.Contents, message.Destination, c.gossiper.GetIdentifier(), 10)
