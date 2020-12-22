@@ -7,17 +7,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type key int
@@ -28,7 +31,7 @@ const (
 
 // Controller is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
-type Controller struct {
+type Drone struct {
 	sync.Mutex
 	uiAddress     string
 	identifier    string
@@ -39,7 +42,7 @@ type Controller struct {
 	// simpleMode: true if the gossiper should broadcast messages from clients as SimpleMessages
 	simpleMode bool
 
-	hookURL *url.URL
+	HookURL *url.URL
 }
 
 type CtrlMessage struct {
@@ -48,19 +51,18 @@ type CtrlMessage struct {
 	Text   string
 }
 
-// NewController returns the controller that sets up the gossiping state machine
+// NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewController(identifier, uiAddress, gossipAddress string, simpleMode bool,
-	g gossip.BaseGossiper, addresses ...string) *Controller {
+func NewDrone(identifier, uiAddress, gossipAddress string, simpleMode bool,
+	g gossip.BaseGossiper, addresses ...string) *Drone {
 
-	c := &Controller{
+	c := &Drone{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
 		simpleMode:    simpleMode,
 		gossiper:      g,
-		//searchMatches: make([]*gossip.File, 0),
 	}
 
 	g.RegisterCallback(c.NewMessage)
@@ -68,12 +70,12 @@ func NewController(identifier, uiAddress, gossipAddress string, simpleMode bool,
 }
 
 // Run ...
-func (c *Controller) Run() {
-	//logger := Logger.With().Timestamp().Str("role", "http proxy").Logger()
+func (c *Drone) Run() {
+	logger := log.With().Timestamp().Str("role", "http proxy").Logger()
 
-	/*nextRequestID := func() string {
+	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}*/
+	}
 
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/message").HandlerFunc(c.GetMessage)
@@ -92,11 +94,11 @@ func (c *Controller) Run() {
 
 	r.Methods("GET").Path("/address").HandlerFunc(c.GetLocalAddr)
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./drone/static/")))
 
 	server := &http.Server{
-		Addr: c.uiAddress,
-		//Handler: tracing(nextRequestID)(logging(logger)(r)),
+		Addr:    c.uiAddress,
+		Handler: tracing(nextRequestID)(logging(logger)(r)),
 	}
 
 	err := server.ListenAndServe()
@@ -107,35 +109,35 @@ func (c *Controller) Run() {
 
 // GET /message returns all messages seen so far as json encoded Message
 // XXX lot of optimizations to be done here
-func (c *Controller) GetMessage(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 	c.Lock()
 	defer c.Unlock()
-	//Logger.Info().Msgf("These are the msgs %v", c.messages)
+	log.Info().Msgf("These are the msgs %v", c.messages)
 	if err := json.NewEncoder(w).Encode(c.messages); err != nil {
-		//Logger.Err(err)
+		log.Err(err)
 		http.Error(w, "could not encode json", http.StatusInternalServerError)
 		return
 	}
-	//Logger.Info().Msg("GUI request for the messages received by the gossiper")
+	log.Info().Msg("GUI request for the messages received by the gossiper")
 }
 
 // POST /message with text in the body as raw string
 /*func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
-	//Logger.Info().Msg("POSTING MESSAGE")
+	log.Info().Msg("POSTING MESSAGE")
 	c.Lock()
 	defer c.Unlock()
 	text, ok := readString(w, r)
 	if !ok {
-		//Logger.Err(xerrors.New("failed to read string"))
+		log.Err(xerrors.New("failed to read string"))
 		return
 	}
 	message := client.ClientMessage{}
 	err := json.Unmarshal([]byte(text), &message)
 	if err != nil {
-		//Logger.Err(err)
+		log.Err(err)
 		return
 	}
-	//Logger.Info().Msgf("the controller received a UI message: %+v", message)
+	log.Info().Msgf("the controller received a UI message: %+v", message)
 
 	if c.simpleMode {
 		//c.gossiper.AddSimpleMessage(message.Contents)
@@ -155,32 +157,32 @@ func (c *Controller) GetMessage(w http.ResponseWriter, r *http.Request) {
 }*/
 
 // GET /node returns list of nodes as json encoded slice of string
-func (c *Controller) GetNode(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
-		//Logger.Err(err)
+		log.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 // GET /origin returns list of nodes in the routing table as json encoded slice of string
-func (c *Controller) GetDirectNode(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetDirectNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetDirectNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
-		//Logger.Err(err)
+		log.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 // POST /node with address of node in the body as a string
-func (c *Controller) PostNode(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) PostNode(w http.ResponseWriter, r *http.Request) {
 	text, ok := readString(w, r)
 	if !ok {
 		return
 	}
-	//Logger.Info().Msgf("GUI add node %s", text)
+	log.Info().Msgf("GUI add node %s", text)
 	if err := c.gossiper.AddAddresses(text); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -188,54 +190,54 @@ func (c *Controller) PostNode(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /id returns the identifier as a raw string in the body
-func (c *Controller) GetIdentifier(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetIdentifier(w http.ResponseWriter, r *http.Request) {
 	id := c.gossiper.GetIdentifier()
 	if _, err := w.Write([]byte(id)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//Logger.Info().Msg("GUI identifier request")
+	log.Info().Msg("GUI identifier request")
 }
 
 // POST /id reads the identifier as a raw string in the body and sets the
 // gossiper.
-func (c *Controller) SetIdentifier(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 	id, ok := readString(w, r)
 	if !ok {
 		return
 	}
 
-	//Logger.Info().Msg("GUI set identifier")
+	log.Info().Msg("GUI set identifier")
 
 	c.gossiper.SetIdentifier(id)
 }
 
 // GET /routing returns the routing table
-func (c *Controller) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
 	routing := c.gossiper.GetRoutingTable()
 	if err := json.NewEncoder(w).Encode(routing); err != nil {
-		//Logger.Err(err)
+		log.Err(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 // POST /routing adds a route to the gossiper
-func (c *Controller) AddRoute(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) AddRoute(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		//Logger.Err(err).Msg("failed to parse form")
+		log.Err(err).Msg("failed to parse form")
 	}
 
 	peerName := r.PostFormValue("peerName")
 	if peerName == "" {
-		//Logger.Error().Msg("peerName is empty")
+		log.Error().Msg("peerName is empty")
 		return
 	}
 
 	nextHop := r.PostFormValue("nextHop")
 	if nextHop == "" {
-		//Logger.Error().Msg("nextHop is empty")
+		log.Error().Msg("nextHop is empty")
 		return
 	}
 
@@ -243,7 +245,7 @@ func (c *Controller) AddRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 // GET /address returns the gossiper's local addr
-func (c *Controller) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 	localAddr := c.gossiper.GetLocalAddr()
 
 	_, err := w.Write([]byte(localAddr))
@@ -254,7 +256,7 @@ func (c *Controller) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 }
 
 // NewMessage ...
-func (c *Controller) NewMessage(origin string, msg gossip.GossipPacket) {
+func (c *Drone) NewMessage(origin string, msg gossip.GossipPacket) {
 	c.Lock()
 	defer c.Unlock()
 	if msg.Rumor != nil {
@@ -262,9 +264,9 @@ func (c *Controller) NewMessage(origin string, msg gossip.GossipPacket) {
 			msg.Rumor.ID, msg.Rumor.Text})
 	}
 
-	//Logger.Info().Msgf("messages %v", c.messages)
+	log.Info().Msgf("messages %v", c.messages)
 
-	if c.hookURL != nil {
+	if c.HookURL != nil {
 		cp := gossip.CallbackPacket{
 			Addr: origin,
 			Msg:  msg,
@@ -272,23 +274,23 @@ func (c *Controller) NewMessage(origin string, msg gossip.GossipPacket) {
 
 		msgBuf, err := json.Marshal(cp)
 		if err != nil {
-			//Logger.Err(err).Msg("failed to marshal packet")
+			log.Err(err).Msg("failed to marshal packet")
 			return
 		}
 
 		req := &http.Request{
 			Method: "POST",
-			URL:    c.hookURL,
+			URL:    c.HookURL,
 			Header: map[string][]string{
 				"Content-Type": {"application/json; charset=UTF-8"},
 			},
 			Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
 		}
 
-		//Logger.Info().Msgf("sending a post callback to %s", c.hookURL)
+		log.Info().Msgf("sending a post callback to %s", c.HookURL)
 		_, err = http.DefaultClient.Do(req)
 		if err != nil {
-			//Logger.Err(err).Msgf("failed to call callback to %s", c.hookURL)
+			log.Err(err).Msgf("failed to call callback to %s", c.HookURL)
 		}
 	}
 }
