@@ -6,6 +6,7 @@ package drone
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,6 +18,7 @@ import (
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"golang.org/x/xerrors"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
@@ -28,6 +30,16 @@ type key int
 const (
 	requestIDKey key = 0
 )
+
+type ClientMessage struct {
+	Contents    string `json:"contents"`
+	Destination string `json:"destination"`
+	Share       string `json:"share"`
+	FileName    string `json:"filename"`
+	Request     string `json:"request"`
+	Keywords    string `json:"keywords"`
+	Budget      string `json:"budget"`
+}
 
 // Controller is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
@@ -79,7 +91,7 @@ func (c *Drone) Run() {
 
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/message").HandlerFunc(c.GetMessage)
-	//r.Methods("POST").Path("/message").HandlerFunc(c.PostMessage)
+	r.Methods("POST").Path("/message").HandlerFunc(c.PostMessage)
 
 	r.Methods("GET").Path("/origin").HandlerFunc(c.GetDirectNode)
 
@@ -122,7 +134,7 @@ func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /message with text in the body as raw string
-/*func (c *Controller) PostMessage(w http.ResponseWriter, r *http.Request) {
+func (c *Drone) PostMessage(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("POSTING MESSAGE")
 	c.Lock()
 	defer c.Unlock()
@@ -131,7 +143,7 @@ func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 		log.Err(xerrors.New("failed to read string"))
 		return
 	}
-	message := client.ClientMessage{}
+	message := ClientMessage{}
 	err := json.Unmarshal([]byte(text), &message)
 	if err != nil {
 		log.Err(err)
@@ -144,6 +156,7 @@ func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
 	} else if message.Destination != "" {
 		// client message for a private message
+		fmt.Println("SEND PRIVATE")
 		c.gossiper.AddPrivateMessage(message.Contents, message.Destination, c.gossiper.GetIdentifier(), 10)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
 	} else {
@@ -154,7 +167,7 @@ func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 		w.Write(buf)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, id, message.Contents})
 	}
-}*/
+}
 
 // GET /node returns list of nodes as json encoded slice of string
 func (c *Drone) GetNode(w http.ResponseWriter, r *http.Request) {
@@ -262,6 +275,10 @@ func (c *Drone) NewMessage(origin string, msg gossip.GossipPacket) {
 	if msg.Rumor != nil {
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
 			msg.Rumor.ID, msg.Rumor.Text})
+	}
+
+	if msg.Private != nil {
+		c.messages = append(c.messages, CtrlMessage{msg.Private.Origin, 0, msg.Private.Text})
 	}
 
 	log.Info().Msgf("messages %v", c.messages)
