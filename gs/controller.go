@@ -38,8 +38,6 @@ type GroundStation struct {
 	gossiper      gossip.BaseGossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
-	// simpleMode: true if the gossiper should broadcast messages from clients as SimpleMessages
-	simpleMode bool
 
 	HookURL *url.URL
 }
@@ -53,14 +51,13 @@ type CtrlMessage struct {
 // NewGroundStation returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewGroundStation(identifier, uiAddress, gossipAddress string, simpleMode bool,
+func NewGroundStation(identifier, uiAddress, gossipAddress string,
 	g gossip.BaseGossiper, addresses ...string) *GroundStation {
 
 	c := &GroundStation{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
-		simpleMode:    simpleMode,
 		gossiper:      g,
 	}
 
