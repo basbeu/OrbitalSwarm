@@ -76,6 +76,9 @@ func (c *GroundStation) Run() {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
 
+	hub := newHub()
+	go hub.run()
+
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/message").HandlerFunc(c.GetMessage)
 
@@ -92,10 +95,11 @@ func (c *GroundStation) Run() {
 
 	r.Methods("GET").Path("/address").HandlerFunc(c.GetLocalAddr)
 
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./gs/static/")))
+	r.Methods("GET").Path("/ws").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
-	hub := newHub()
-	go hub.run()
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./gs/static/")))
 
 	server := &http.Server{
 		Addr:    c.uiAddress,
