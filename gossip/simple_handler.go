@@ -44,14 +44,10 @@ func (msg *RumorMessage) Exec(g *Gossiper, addr *net.UDPAddr) error {
 		for i := msg.ID; i < nextID; i++ {
 			message, _ := tracking.messages.Load(i)
 			rumor := message.(*RumorMessage)
-			isPaxosRumor := rumor.Extra != nil
 
 			// Call the callback - Deliver rumor
 			if g.callback != nil && g.server.Address != addr && !isRouteRumor {
 				g.callback(msg.Origin, GossipPacket{Rumor: rumor}.Copy())
-			}
-			if isPaxosRumor {
-				g.naming.handleExtraMessage(g, rumor.Extra)
 			}
 		}
 	}

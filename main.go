@@ -85,7 +85,7 @@ func main() {
 		panic(err)
 	}
 
-	// controller := NewController(*ownName, UIAddress, gossipAddress, *broadcastMode, g, bootstrapAddr...)
+	// controller := NewController(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
 	controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
 
 	if *hookURL != "" {
