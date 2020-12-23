@@ -1,5 +1,4 @@
 // ========== CS-438 orbitalswarm Skeleton ===========
-// *** Do not change this file ***
 
 package drone
 
@@ -32,17 +31,13 @@ const (
 	requestIDKey key = 0
 )
 
+// ClientMessage internally represents messages comming from the client
 type ClientMessage struct {
 	Contents    string `json:"contents"`
 	Destination string `json:"destination"`
-	Share       string `json:"share"`
-	FileName    string `json:"filename"`
-	Request     string `json:"request"`
-	Keywords    string `json:"keywords"`
-	Budget      string `json:"budget"`
 }
 
-// Controller is responsible to be the glue between the gossiping protocol and
+// Drone is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
 type Drone struct {
 	sync.Mutex
@@ -56,6 +51,7 @@ type Drone struct {
 	position      utils.Vec3d
 }
 
+// CtrlMessage internal representation of messages for the controller of the UI
 type CtrlMessage struct {
 	Origin string
 	ID     uint32
@@ -119,7 +115,7 @@ func (c *Drone) Run() {
 	}
 }
 
-// GET /message returns all messages seen so far as json encoded Message
+// GetMessage returns all messages seen so far as json encoded Message
 // XXX lot of optimizations to be done here
 func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 	c.Lock()
@@ -133,7 +129,7 @@ func (c *Drone) GetMessage(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("GUI request for the messages received by the gossiper")
 }
 
-// POST /message with text in the body as raw string
+// PostMessage with text in the body as raw string
 func (c *Drone) PostMessage(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("POSTING MESSAGE")
 	c.Lock()
@@ -166,7 +162,7 @@ func (c *Drone) PostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /node returns list of nodes as json encoded slice of string
+// GetNode returns list of nodes as json encoded slice of string
 func (c *Drone) GetNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
@@ -176,7 +172,7 @@ func (c *Drone) GetNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /origin returns list of nodes in the routing table as json encoded slice of string
+// GetDirectNode returns list of nodes in the routing table as json encoded slice of string
 func (c *Drone) GetDirectNode(w http.ResponseWriter, r *http.Request) {
 	hosts := c.gossiper.GetDirectNodes()
 	if err := json.NewEncoder(w).Encode(hosts); err != nil {
@@ -186,7 +182,7 @@ func (c *Drone) GetDirectNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// POST /node with address of node in the body as a string
+// PostNode with address of node in the body as a string
 func (c *Drone) PostNode(w http.ResponseWriter, r *http.Request) {
 	text, ok := readString(w, r)
 	if !ok {
@@ -199,7 +195,7 @@ func (c *Drone) PostNode(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET /id returns the identifier as a raw string in the body
+// GetIdentifier returns the identifier as a raw string in the body
 func (c *Drone) GetIdentifier(w http.ResponseWriter, r *http.Request) {
 	id := c.gossiper.GetIdentifier()
 	if _, err := w.Write([]byte(id)); err != nil {
@@ -209,7 +205,7 @@ func (c *Drone) GetIdentifier(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("GUI identifier request")
 }
 
-// POST /id reads the identifier as a raw string in the body and sets the
+// SetIdentifier reads the identifier as a raw string in the body and sets the
 // gossiper.
 func (c *Drone) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 	id, ok := readString(w, r)
@@ -222,7 +218,7 @@ func (c *Drone) SetIdentifier(w http.ResponseWriter, r *http.Request) {
 	c.gossiper.SetIdentifier(id)
 }
 
-// GET /routing returns the routing table
+// GetRoutingTable returns the routing table
 func (c *Drone) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
 	routing := c.gossiper.GetRoutingTable()
 	if err := json.NewEncoder(w).Encode(routing); err != nil {
@@ -232,7 +228,7 @@ func (c *Drone) GetRoutingTable(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// POST /routing adds a route to the gossiper
+// AddRoute adds a route to the gossiper
 func (c *Drone) AddRoute(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -254,7 +250,7 @@ func (c *Drone) AddRoute(w http.ResponseWriter, r *http.Request) {
 	c.gossiper.AddRoute(peerName, nextHop)
 }
 
-// GET /address returns the gossiper's local addr
+// GetLocalAddr returns the gossiper's local addr
 func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 	localAddr := c.gossiper.GetLocalAddr()
 
@@ -265,7 +261,7 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// NewMessage ...
+// HandleGossipMessage handle specific messages concerning the drone
 func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 	c.Lock()
 	defer c.Unlock()

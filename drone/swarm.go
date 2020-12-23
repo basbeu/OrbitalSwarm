@@ -8,17 +8,20 @@ import (
 	"go.dedis.ch/cs438/orbitalswarm/utils"
 )
 
+// Swarm represents a collections of drones that runs together
 type Swarm struct {
 	drones []*Drone
 	stop   chan struct{}
 }
 
+// NewSwarm create and return an new Swarm, but do not start the drones
 func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []utils.Vec3d) {
 	swarm := Swarm{
 		drones: make([]*Drone, numDrones),
 		stop:   make(chan struct{}),
 	}
 
+	// Initialise drone parameters
 	gossipAddresses := make([]string, numDrones)
 	UIAddresses := make([]string, numDrones)
 	positions := make([]utils.Vec3d, numDrones)
@@ -37,6 +40,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		}
 	}
 
+	// Drone creation
 	fac := gossip.GetFactory()
 	for i := 0; i < numDrones; i++ {
 		name := fmt.Sprintf("drone%d", i)
@@ -54,6 +58,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 	return &swarm, positions
 }
 
+// Run the drones composing the drones, this function is blocking until the the stop function is called
 func (swarm *Swarm) Run() {
 	for _, drone := range swarm.drones {
 		ready := make(chan struct{})
@@ -66,6 +71,7 @@ func (swarm *Swarm) Run() {
 	<-swarm.stop
 }
 
+// Stop every drone composing the Swarm
 func (swarm *Swarm) Stop() {
 	close(swarm.stop)
 }
