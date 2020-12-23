@@ -38,7 +38,7 @@ func NewNaming(numParticipant int, nodeIndex int, paxosRetry int) *Naming {
 	}
 }
 
-func (n *Naming) propose(g *gossip.Gossiper, metahash string, filename string) (string, error) {
+func (n *Naming) Propose(g *gossip.Gossiper, metahash string, filename string) (string, error) {
 	hash, err := hex.DecodeString(metahash)
 	if err != nil {
 		return "", err
@@ -91,7 +91,7 @@ func (n *Naming) getFiles() bool {
 	return false
 }
 
-func (n *Naming) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
+func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
 	block := n.blockChain.handleExtraMessage(g, msg)
 	if block != nil {
 		metahash := hex.EncodeToString(block.Metahash)
