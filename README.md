@@ -9,11 +9,11 @@ Circular network. Initially, p1 has p2 as a known peer, p2 has p3 as a known pee
 p1 sends a message. The message should reach everyone and loop infinitely through the network, minus the cases when the very first transmission fails because of unreliable delivery over UDP. Additionally, every node adds the other two in their list of known neighbors.
 
 
-`./peerster -UIPort=2222 -gossipAddr=127.0.0.1:5000 -name=p1 -peers=127.0.0.1:5001` 
+`./orbitalswarm -UIPort=2222 -gossipAddr=127.0.0.1:5000 -name=p1 -peers=127.0.0.1:5001 --numParticipants 3 --nodeIndex 1` 
 
-`./peerster -UIPort=2223 -gossipAddr=127.0.0.1:5001 -name=p2 -peers=127.0.0.1:5002` 
+`./orbitalswarm -UIPort=2223 -gossipAddr=127.0.0.1:5001 -name=p2 -peers=127.0.0.1:5002 --numParticipants 3 --nodeIndex 2` 
 
-`./peerster -UIPort=2224 -gossipAddr=127.0.0.1:5002 -name=p3 -peers=127.0.0.1:5000`
+`./orbitalswarm -UIPort=2224 -gossipAddr=127.0.0.1:5002 -name=p3 -peers=127.0.0.1:5000 --numParticipants 3 --nodeIndex 3`
 
 `./cli/cli -UIPort=2222`
 

@@ -8,19 +8,18 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
+
+	"go.dedis.ch/cs438/orbitalswarm/drone"
 
 	"github.com/rs/zerolog"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
-	"go.dedis.ch/cs438/orbitalswarm/gs"
 )
 
 const defaultGossipAddr = "127.0.0.1:33000" // IP address:port number for gossiping
@@ -46,14 +45,13 @@ var (
 
 func main() {
 
-	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
+	//UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
-	gossipAddr := flag.String("gossipAddr", defaultGossipAddr, "ip:port for gossip communication with peers")
-	ownName := flag.String("name", defaultName, "identifier used in the chat")
-	peers := flag.String("peers", "", "peer addresses used for bootstrap")
-	hookURL := flag.String("hookURL", "", "A URL that is called each time a new message comes, for example http://127.0.0.1:4000/callback")
-	watchInURL := flag.String("watchInURL", "", "A URL that is called each time the watcher notifies for an incoming message, for example http://127.0.0.1:4000/watchIn")
-	watchOutURL := flag.String("watchOutURL", "", "A URL that is called each time the watcher notifies for an outgoing message, for example http://127.0.0.1:4000/watchOut")
+	//gossipAddr := flag.String("gossipAddr", defaultGossipAddr, "ip:port for gossip communication with peers")
+	//ownName := flag.String("name", defaultName, "identifier used in the chat")
+	//peers := flag.String("peers", "", "peer addresses used for bootstrap")
+	//watchInURL := flag.String("watchInURL", "", "A URL that is called each time the watcher notifies for an incoming message, for example http://127.0.0.1:4000/watchIn")
+	//watchOutURL := flag.String("watchOutURL", "", "A URL that is called each time the watcher notifies for an outgoing message, for example http://127.0.0.1:4000/watchOut")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
 
 	numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
@@ -72,28 +70,31 @@ func main() {
 		return
 	}
 
-	UIAddress := "127.0.0.1:" + *UIPort
+	/*UIAddress := "127.0.0.1:" + *UIPort
 	gossipAddress := *gossipAddr
-	bootstrapAddr := strings.Split(*peers, ",")
+	bootstrapAddr := strings.Split(*peers, ",")*/
 
 	// The work happens in the gossip folder. You should not touch the code in
 	// this package.
-	fac := gossip.GetFactory()
+	/*fac := gossip.GetFactory()
 	g, err := fac.New(gossipAddress, *ownName, *antiEntropy, *routeTimer,
 		*numParticipants, *nodeIndex, *paxosRetry)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 
 	// controller := NewController(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
-	controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
+	//controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
+	//controller := drone.NewDrone(*ownName, UIAddress, gossipAddress, g, bootstrapAddr)
 
-	if *hookURL != "" {
+	swarm, _ := drone.NewSwarm(9, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
+
+	/*if *hookURL != "" {
 		parsedURL, err := url.Parse(*hookURL)
 		if err != nil {
 			Logger.Err(err)
 		} else {
-			controller.HookURL = parsedURL
+			//controller.HookURL = parsedURL
 		}
 	}
 
@@ -131,18 +132,19 @@ func main() {
 				}
 			}()
 		}
-	}
+	}*/
+	/*
+		ready := make(chan struct{})
+		go g.Run(ready)
+		defer g.Stop()
+		<-ready
 
-	ready := make(chan struct{})
-	go g.Run(ready)
-	defer g.Stop()
-	<-ready
+		if bootstrapAddr[0] != "" {
+			g.AddAddresses(bootstrapAddr...)
+		}*/
 
-	if bootstrapAddr[0] != "" {
-		g.AddAddresses(bootstrapAddr...)
-	}
-
-	controller.Run()
+	swarm.Run()
+	//controller.Run()
 }
 
 func sendWatch(p gossip.CallbackPacket, u *url.URL) {
