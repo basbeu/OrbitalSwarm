@@ -4,11 +4,8 @@
 package gs
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -37,17 +34,10 @@ type GroundStation struct {
 	gossipAddress string
 	gossiper      gossip.BaseGossiper
 	cliConn       net.Conn
-	messages      []CtrlMessage
 
 	HookURL *url.URL
 
 	handler chan []byte
-}
-
-type CtrlMessage struct {
-	Origin string
-	ID     uint32
-	Text   string
 }
 
 // NewGroundStation returns the controller that sets up the gossiping state machine
@@ -121,38 +111,37 @@ func (g *GroundStation) HandleGossipMessage(origin string, msg gossip.GossipPack
 
 	// In case of other type of message
 	if msg.Rumor != nil {
-		g.messages = append(g.messages, CtrlMessage{msg.Rumor.Origin,
-			msg.Rumor.ID, msg.Rumor.Text})
-		log.Info().Msgf("messages %v", g.messages)
+		//TODO: Handle messages
+		// log.Info().Msgf("messages %v",)
 	}
 
-	if g.HookURL != nil {
-		cp := gossip.CallbackPacket{
-			Addr: origin,
-			Msg:  msg,
-		}
+	// if g.HookURL != nil {
+	// 	cp := gossip.CallbackPacket{
+	// 		Addr: origin,
+	// 		Msg:  msg,
+	// 	}
 
-		msgBuf, err := json.Marshal(cp)
-		if err != nil {
-			log.Err(err).Msg("failed to marshal packet")
-			return
-		}
+	// 	msgBuf, err := json.Marshal(cp)
+	// 	if err != nil {
+	// 		log.Err(err).Msg("failed to marshal packet")
+	// 		return
+	// 	}
 
-		req := &http.Request{
-			Method: "POST",
-			URL:    g.HookURL,
-			Header: map[string][]string{
-				"Content-Type": {"application/json; charset=UTF-8"},
-			},
-			Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
-		}
+	// 	req := &http.Request{
+	// 		Method: "POST",
+	// 		URL:    g.HookURL,
+	// 		Header: map[string][]string{
+	// 			"Content-Type": {"application/json; charset=UTF-8"},
+	// 		},
+	// 		Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
+	// 	}
 
-		log.Info().Msgf("sending a post callback to %s", g.HookURL)
-		_, err = http.DefaultClient.Do(req)
-		if err != nil {
-			log.Err(err).Msgf("failed to call callback to %s", g.HookURL)
-		}
-	}
+	// 	log.Info().Msgf("sending a post callback to %s", g.HookURL)
+	// 	_, err = http.DefaultClient.Do(req)
+	// 	if err != nil {
+	// 		log.Err(err).Msgf("failed to call callback to %s", g.HookURL)
+	// 	}
+	// }
 }
 
 // // GET /message returns all messages seen so far as json encoded Message

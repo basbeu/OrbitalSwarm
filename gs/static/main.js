@@ -18,18 +18,16 @@ let initScene = () => {
    const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
 
    // controls
-
-   // const controls = new OrbitControls( camera, renderer.domElement );
-   // controls.minDistance = 20;
-   // controls.maxDistance = 50;
-   // controls.maxPolarAngle = Math.PI / 2;
+   const controls = new THREE.OrbitControls(camera, renderer.domElement);
+   controls.minDistance = 20;
+   controls.maxDistance = 50;
+   controls.maxPolarAngle = Math.PI / 2;
+   controls.update();
 
    // helper
-
    scene.add(new THREE.AxesHelper(20));
 
    // light
-
    scene.add(new THREE.AmbientLight(0x222222));
    const light = new THREE.PointLight(0xffffff, 1);
    light.position.set(50, 50, 50);
