@@ -1,4 +1,5 @@
-// import { OrbitControls } from './jsm/controls/OrbitControls.js';
+import * as THREE from "https://unpkg.com/three@0.123/build/three.module.js";
+import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/controls/OrbitControls.js";
 
 let initScene = () => {
    const scene = new THREE.Scene();
@@ -18,7 +19,7 @@ let initScene = () => {
    const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
 
    // controls
-   const controls = new THREE.OrbitControls(camera, renderer.domElement);
+   const controls = new OrbitControls(camera, renderer.domElement);
    controls.minDistance = 20;
    controls.maxDistance = 50;
    controls.maxPolarAngle = Math.PI / 2;
@@ -36,7 +37,7 @@ let initScene = () => {
    // const cone = new THREE.Mesh( geometry, material );
    // scene.add( cone );
 
-   // TODO Create all objects
+   // Create all objects
    const drones = [];
    const spacing = 3;
    const nbDrones = 9;
@@ -53,18 +54,17 @@ let initScene = () => {
 
    camera.position.set(10, 10, 10);
    camera.lookAt(new THREE.Vector3(0, 0, 0));
-   renderer.render(scene, camera);
+   controls.update();
 
-   // const animate = function () {
-   //   requestAnimationFrame(animate);
+   // Render
+   const animate = function () {
+      requestAnimationFrame(animate);
 
-   //   cube.rotation.x += 0.01;
-   //   cube.rotation.y += 0.01;
+      controls.update();
 
-   //   renderer.render(scene, camera);
-   // };
-
-   // animate();
+      renderer.render(scene, camera);
+   };
+   animate();
 
    function onWindowResize() {
       camera.aspect = window.innerWidth / window.innerHeight;
