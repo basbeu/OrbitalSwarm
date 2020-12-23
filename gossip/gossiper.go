@@ -1,6 +1,6 @@
-// ========== CS-438 Project ===========
-// *** Implement here the gossiper ***
 package gossip
+
+// ========== CS-438 Project ===========
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip/watcher"
 	"go.dedis.ch/onet/v3/log"
 
@@ -349,7 +350,7 @@ func (g *Gossiper) AddMessage(text string) uint32 {
 }
 
 // AddExtraMessage allow to send some paxos message
-func (g *Gossiper) AddExtraMessage(paxosMsg *ExtraMessage) uint32 {
+func (g *Gossiper) AddExtraMessage(paxosMsg *extramessage.ExtraMessage) uint32 {
 	// Generate next ID
 	g.mutexNextID.Lock()
 	id := g.nextID
