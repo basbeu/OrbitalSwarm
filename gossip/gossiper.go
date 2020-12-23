@@ -6,16 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 
-	"go.dedis.ch/cs438/hw3/gossip/types"
-	"go.dedis.ch/cs438/hw3/gossip/watcher"
+	"go.dedis.ch/cs438/orbitalswarm/gossip/watcher"
 	"go.dedis.ch/onet/v3/log"
 
 	"sync"
@@ -71,26 +68,6 @@ type Gossiper struct {
 	timerRouteRumor     *time.Ticker
 	chanAntiEntropyStop chan bool
 	timerAntiEntropy    *time.Ticker
-
-	// Folder to store data about indexed files (comes from -sharedir)
-	rootSharedData string
-	// Folder to store downloaded files (comes from -downdir)
-	rootDownloadedFiles string
-
-	chunks        map[string][]byte
-	waitingChunks map[string]chan bool
-
-	// Origin -> MetaHash -> filename
-	searchIndexes map[string]map[string]string
-	// MetaHash -> NodeID -> ChunksIds
-	searchResults map[string]map[string][]uint32
-	// Signal some news results
-	waitingSearch chan bool
-
-	searchRequests map[string]time.Time
-
-	naming       *Naming
-	indexedFiles map[string]string
 }
 
 // NewGossiper returns a Gossiper that is able to listen to the given address
@@ -137,15 +114,9 @@ func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, nu
 		chanAntiEntropyStop: make(chan bool, 1),
 
 		nodes: make(map[string]*net.UDPAddr),
-
-		naming: NewNaming(numParticipant, nodeIndex, paxosRetry),
 	}
 
 	// Register handler
-	err = g.RegisterHandler(&SimpleMessage{})
-	if err != nil {
-		return nil, err
-	}
 	err = g.RegisterHandler(&RumorMessage{})
 	if err != nil {
 		return nil, err
@@ -253,22 +224,6 @@ func (g *Gossiper) Run(ready chan struct{}) {
 		}()
 	}
 
-	// Index files in DownloadedFiles
-	go func() {
-		files, err := ioutil.ReadDir(g.rootDownloadedFiles)
-		if err != nil {
-			return
-		}
-		var strFiles []string
-		for _, f := range files {
-			strFiles = append(strFiles, f.Name())
-		}
-
-		if len(strFiles) > 0 {
-			g.IndexShares(strings.Join(strFiles, ","))
-		}
-	}()
-
 	// Connect close handling to handler close event
 	handlingFinished <- <-handlerClosed
 }
@@ -287,13 +242,6 @@ func (g *Gossiper) Stop() {
 	g.handler.Stop()
 	g.server.Stop()
 	// log.Printf("Gossiper closed gracefully")
-}
-
-// GetBlocks returns all the blocks added so far. Key should be hexadecimal
-// representation of the block's hash. The first return is the hexadecimal
-// hash of the last block.
-func (g *Gossiper) GetBlocks() (string, map[string]types.Block) {
-	return g.naming.GetBlocks()
 }
 
 func (g *Gossiper) updateRoute(destination, nextHop string, lastID uint32, officialDsdvUpdate bool) {
@@ -355,28 +303,6 @@ func (g *Gossiper) trackRumor(msg *RumorMessage) (uint32, uint32) {
 	return ID, 1
 }
 
-// AddSimpleMessage implements gossip.BaseGossiper. It takes a text that will be
-// spread through the gossip network with the identifier of g.
-func (g *Gossiper) AddSimpleMessage(text string) {
-	// Logging
-	// log.Printf("CLIENT MESSAGE %s", text)
-	// log.Printf("PEERS %s", strings.Join(g.GetNodes(), ","))
-
-	msg := &GossipPacket{
-		Simple: &SimpleMessage{
-			OriginPeerName: g.identifier,
-			RelayPeerAddr:  g.address,
-			Contents:       text,
-		},
-	}
-
-	// Simply call handler
-	g.handler.HandlePacket(g, HandlingPacket{
-		data: msg,
-		addr: g.server.Address,
-	})
-}
-
 // AddPrivateMessage sends the message to the next hop.
 func (g *Gossiper) AddPrivateMessage(text, dest, origin string, hoplimit int) {
 	msg := &GossipPacket{
@@ -423,7 +349,7 @@ func (g *Gossiper) AddMessage(text string) uint32 {
 }
 
 // AddExtraMessage allow to send some paxos message
-func (g *Gossiper) AddExtraMessage(paxosMsg *types.ExtraMessage) uint32 {
+func (g *Gossiper) AddExtraMessage(paxosMsg *ExtraMessage) uint32 {
 	// Generate next ID
 	g.mutexNextID.Lock()
 	id := g.nextID

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.dedis.ch/cs438/hw3/gossip/types"
+	"go.dedis.ch/cs438/orbitalswarm/gossip/types"
 )
 
 var factory = GetFactory()
@@ -2201,7 +2201,7 @@ func createAndStartNode(t *testing.T, name string, opts ...nodeOption) nodeInfo 
 
 func createAndStartBinNode(t *testing.T, name string, opts ...nodeOption) nodeInfo {
 
-	n := createNode(t, NewBinGossipFactory("./hw3.linux.amd64"), "127.0.0.1:0", name, opts...)
+	n := createNode(t, NewBinGossipFactory("./orbitalswarm.linux.amd64"), "127.0.0.1:0", name, opts...)
 
 	startNodesBlocking(t, n.gossiper)
 

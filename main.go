@@ -19,14 +19,14 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.dedis.ch/cs438/hw3/gossip"
-
-	"go.dedis.ch/cs438/hw3/client"
+	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/gs"
 )
 
 const defaultGossipAddr = "127.0.0.1:33000" // IP address:port number for gossiping
 const defaultName = "peerXYZ"               // Give a unique default name
-const defaultPaxosRetry = 3                 // in seconds
+const defaultPaxosRetry = 3
+const defaultUIPort = "12000" // Default port number
 
 var (
 	// defaultLevel can be changed to set the desired level of the logger
@@ -46,18 +46,15 @@ var (
 
 func main() {
 
-	UIPort := flag.String("UIPort", client.DefaultUIPort, "port for gossip communication with peers")
+	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
 	gossipAddr := flag.String("gossipAddr", defaultGossipAddr, "ip:port for gossip communication with peers")
 	ownName := flag.String("name", defaultName, "identifier used in the chat")
 	peers := flag.String("peers", "", "peer addresses used for bootstrap")
-	broadcastMode := flag.Bool("broadcast", false, "run gossiper in broadcast mode")
 	hookURL := flag.String("hookURL", "", "A URL that is called each time a new message comes, for example http://127.0.0.1:4000/callback")
 	watchInURL := flag.String("watchInURL", "", "A URL that is called each time the watcher notifies for an incoming message, for example http://127.0.0.1:4000/watchIn")
 	watchOutURL := flag.String("watchOutURL", "", "A URL that is called each time the watcher notifies for an outgoing message, for example http://127.0.0.1:4000/watchOut")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
-	rootSharedData := flag.String("sharedir", "_SharedData/", "the directory to store data about indexed files")
-	rootDownloadedFiles := flag.String("downdir", "_Downloads/", "the directory to store downloaded and reconstructed files")
 
 	numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
 	nodeIndex := flag.Int("nodeIndex", -1, "index of the node with respect to all the participants")
@@ -83,20 +80,20 @@ func main() {
 	// this package.
 	fac := gossip.GetFactory()
 	g, err := fac.New(gossipAddress, *ownName, *antiEntropy, *routeTimer,
-		*rootSharedData, *rootDownloadedFiles, *numParticipants, *nodeIndex,
-		*paxosRetry)
+		*numParticipants, *nodeIndex, *paxosRetry)
 	if err != nil {
 		panic(err)
 	}
 
-	controller := NewController(*ownName, UIAddress, gossipAddress, *broadcastMode, g, bootstrapAddr...)
+	// controller := NewController(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
+	controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
 
 	if *hookURL != "" {
 		parsedURL, err := url.Parse(*hookURL)
 		if err != nil {
 			Logger.Err(err)
 		} else {
-			controller.hookURL = parsedURL
+			controller.HookURL = parsedURL
 		}
 	}
 

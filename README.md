@@ -1,4 +1,4 @@
-# CS-438 Project
+# CS-438 OrbitalSwarm
 
 This is the reference implementation for CS438 Peerster system, homework 3.
  

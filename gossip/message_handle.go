@@ -124,16 +124,13 @@ func (h *MessageHandler) Stop() {
 
 func (h *MessageHandler) extractMessage(packet GossipPacket) (interface{}, error) {
 	// Check wether the message decoded is valid
-	if packet.Simple != nil && (packet.Status != nil || packet.Private != nil || packet.Rumor != nil) ||
-		packet.Status != nil && (packet.Private != nil || packet.Rumor != nil) ||
+	if packet.Status != nil && (packet.Private != nil || packet.Rumor != nil) ||
 		packet.Private != nil && packet.Rumor != nil {
 		return GossipPacket{}, fmt.Errorf("Invalid packet")
 	}
 
 	// Return the message
-	if packet.Simple != nil {
-		return packet.Simple, nil
-	} else if packet.Rumor != nil {
+	if packet.Rumor != nil {
 		return packet.Rumor, nil
 	} else if packet.Private != nil {
 		return packet.Private, nil
@@ -174,10 +171,6 @@ func (h *MessageHandler) handlePacket(g *Gossiper, packet HandlingPacket) {
 	}
 
 	// switch message.(type) {
-	// case *SimpleMessage:
-	// 	msg := message.(*SimpleMessage)
-	// 	log.Printf("SIMPLE MESSAGE origin %s from %s contents %s", msg.OriginPeerName, msg.RelayPeerAddr, msg.Contents)
-
 	// case *RumorMessage:
 	// 	msg := message.(*RumorMessage)
 	// 	if msg.Extra != nil {
