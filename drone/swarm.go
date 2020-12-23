@@ -14,14 +14,14 @@ type Swarm struct {
 	stop   chan struct{}
 }
 
-// NewSwarm create and return an new Swarm, but do not start the drones
+// NewSwarm creates and returns an new Swarm, but do not start the drones
 func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []utils.Vec3d) {
 	swarm := Swarm{
 		drones: make([]*Drone, numDrones),
 		stop:   make(chan struct{}),
 	}
 
-	// Initialise drone parameters
+	// Drone parameters initialisation
 	gossipAddresses := make([]string, numDrones)
 	UIAddresses := make([]string, numDrones)
 	positions := make([]utils.Vec3d, numDrones)
