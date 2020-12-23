@@ -3,7 +3,6 @@ package gossip
 // ========== CS-438 orbitalswarm Skeleton ===========
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -135,11 +134,11 @@ type NewMessageCallback func(origin string, message GossipPacket)
 // GossipFactory provides the primitive to instantiate a new Gossiper
 type GossipFactory interface {
 	New(address, identifier string, antiEntropy int, routeTimer int,
-		numParticipant int, nodeIndex, paxosRetry int) (BaseGossiper, error)
+		numParticipant int, nodeIndex, paxosRetry int) (*Gossiper, error)
 }
 
 // BaseGossiper ...
-type BaseGossiper interface {
+/*type BaseGossiper interface {
 	BroadcastMessage(GossipPacket)
 	RegisterHandler(handler interface{}) error
 	// GetNodes returns the list of nodes this gossiper knows currently in the
@@ -180,4 +179,4 @@ type BaseGossiper interface {
 	GetRoutingTable() map[string]*RouteStruct
 	// GetLocalAddr returns the local address (ip:port) used for sending and receiving packets to/from the network.
 	GetLocalAddr() string
-}
+}*/
