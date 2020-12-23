@@ -52,7 +52,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i])
+		swarm.drones[i] = NewDrone(name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], newHungarianGraphConsensus(), newMapping())
 	}
 
 	return &swarm, positions

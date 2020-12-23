@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"go.dedis.ch/cs438/orbitalswarm/paxos"
 	"go.dedis.ch/cs438/orbitalswarm/utils"
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
@@ -44,11 +43,12 @@ type Drone struct {
 	uiAddress     string
 	identifier    string
 	gossipAddress string
-	gossiper      gossip.BaseGossiper
+	gossiper      *gossip.Gossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
-	naming        paxos.Naming
 	position      utils.Vec3d
+	mapping       *mapping
+	targetsMapper targetsMapper
 }
 
 // CtrlMessage internal representation of messages for the controller of the UI
@@ -62,14 +62,16 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(identifier, uiAddress, gossipAddress string,
-	g gossip.BaseGossiper, addresses []string, position utils.Vec3d) *Drone {
+	g *gossip.Gossiper, addresses []string, position utils.Vec3d, targetsMapper targetsMapper, mapping *mapping) *Drone {
 
 	c := &Drone{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
 		gossiper:      g,
+		mapping:       mapping,
 		position:      position,
+		targetsMapper: targetsMapper,
 	}
 	g.AddAddresses(addresses...)
 
@@ -269,15 +271,16 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil {
 				//Begin mapping phase
+				target := c.targetsMapper.mapTargets(msg.Rumor.Extra.SwarmInit.DronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
+				c.mapping.Propose(c.gossiper, target)
 			} else {
 				//Handle Paxos
+				c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
 			}
 		}
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
 			msg.Rumor.ID, msg.Rumor.Text})
-	}
-
-	if msg.Private != nil {
+	} else if msg.Private != nil {
 		c.messages = append(c.messages, CtrlMessage{msg.Private.Origin, 0, msg.Private.Text})
 	}
 
