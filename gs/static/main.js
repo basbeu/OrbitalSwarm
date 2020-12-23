@@ -15,9 +15,6 @@ let initScene = () => {
    document.getElementById("scene").appendChild(renderer.domElement);
    // document.body.prepend(renderer.domElement);
 
-   const geometry = new THREE.ConeGeometry(0.5, 1, 32);
-   const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
-
    // controls
    const controls = new OrbitControls(camera, renderer.domElement);
    controls.minDistance = 20;
@@ -33,24 +30,6 @@ let initScene = () => {
    const light = new THREE.PointLight(0xffffff, 1);
    light.position.set(50, 50, 50);
    scene.add(light);
-
-   // const cone = new THREE.Mesh( geometry, material );
-   // scene.add( cone );
-
-   // Create all objects
-   const drones = [];
-   const spacing = 3;
-   const nbDrones = 9;
-   const yOffset = 0.5;
-
-   for (let i = 0; i < nbDrones; ++i) {
-      let drone = new THREE.Mesh(geometry, material);
-      drone.position.x = (i % 3) * spacing;
-      drone.position.y = yOffset;
-      drone.position.z = Math.floor(i / 3) * spacing;
-      drones.push(drone);
-      scene.add(drone);
-   }
 
    camera.position.set(10, 10, 10);
    camera.lookAt(new THREE.Vector3(0, 0, 0));
@@ -75,10 +54,45 @@ let initScene = () => {
    }
 
    window.addEventListener("resize", onWindowResize, false);
-   return { scene, drones };
+   return { scene, camera };
 };
-// WebSocket
 
+// Create drones
+const createDrones = ({ scene }, dronesLocation) => {
+   const geometry = new THREE.ConeGeometry(0.5, 1, 32);
+   const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+   const yOffset = 0.5;
+
+   // Create all objects
+   const drones = dronesLocation.map((l) => {
+      let drone = new THREE.Mesh(geometry, material);
+      drone.position.x = l.x;
+      drone.position.y = l.y + yOffset;
+      drone.position.z = l.z;
+      scene.add(drone);
+      return drone;
+   });
+
+   return drones;
+};
+
+const fakeDronesLocation = () => {
+   const drones = [];
+   const spacing = 3;
+   const nbDrones = 9;
+
+   for (let i = 0; i < nbDrones; ++i) {
+      let drone = {
+         x: (i % 3) * spacing,
+         y: 0,
+         z: Math.floor(i / 3) * spacing,
+      };
+      drones.push(drone);
+   }
+   return drones;
+};
+
+// WebSocket
 if (window["WebSocket"]) {
    let conn = new WebSocket("ws://" + document.location.host + "/ws");
    conn.onclose = function (evt) {
@@ -95,7 +109,10 @@ if (window["WebSocket"]) {
          console.log(item);
       }
    };
-   initScene();
+
+   const dronesLocation = fakeDronesLocation();
+   const sceneData = initScene();
+   createDrones(sceneData, dronesLocation);
 } else {
    var item = document.createElement("div");
    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
