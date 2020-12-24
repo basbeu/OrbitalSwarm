@@ -15,10 +15,10 @@ import (
 	"os"
 	"time"
 
-	"go.dedis.ch/cs438/orbitalswarm/drone"
-
 	"github.com/rs/zerolog"
+	"go.dedis.ch/cs438/orbitalswarm/drone"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/gs"
 )
 
 const defaultGossipAddr = "127.0.0.1:33000" // IP address:port number for gossiping
@@ -43,14 +43,9 @@ var (
 )
 
 func main() {
-
-	//UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
+	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
-	//gossipAddr := flag.String("gossipAddr", defaultGossipAddr, "ip:port for gossip communication with peers")
-	//ownName := flag.String("name", defaultName, "identifier used in the chat")
-	//peers := flag.String("peers", "", "peer addresses used for bootstrap")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
-
 	numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
 	nodeIndex := flag.Int("nodeIndex", -1, "index of the node with respect to all the participants")
 	paxosRetry := flag.Int("paxosRetry", defaultPaxosRetry, "number of seconds a Paxos proposer waits until retrying")
@@ -67,36 +62,26 @@ func main() {
 		return
 	}
 
-	/*UIAddress := "127.0.0.1:" + *UIPort
-	gossipAddress := *gossipAddr
-	bootstrapAddr := strings.Split(*peers, ",")*/
-
-	// The work happens in the gossip folder. You should not touch the code in
-	// this package.
-	/*fac := gossip.GetFactory()
-	g, err := fac.New(gossipAddress, *ownName, *antiEntropy, *routeTimer,
+	// Generate address for the groundStation
+	gossipAddress := ""
+	fac := gossip.GetFactory()
+	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer,
 		*numParticipants, *nodeIndex, *paxosRetry)
 	if err != nil {
 		panic(err)
-	}*/
+	}
 
 	// controller := NewController(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
-	//controller := gs.NewGroundStation(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
-	//controller := drone.NewDrone(*ownName, UIAddress, gossipAddress, g, bootstrapAddr)
-
 	swarm, _ := drone.NewSwarm(9, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
-	/*
-		ready := make(chan struct{})
-		go g.Run(ready)
-		defer g.Stop()
-		<-ready
 
-		if bootstrapAddr[0] != "" {
-			g.AddAddresses(bootstrapAddr...)
-		}*/
+	locations := swarm.DronesLocations()
+	addresses := swarm.DronesAddresses()
+	g.AddAddresses(addresses...)
 
-	swarm.Run()
-	//controller.Run()
+	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations)
+
+	go swarm.Run()
+	groundStation.Run()
 }
 
 func sendWatch(p gossip.CallbackPacket, u *url.URL) {

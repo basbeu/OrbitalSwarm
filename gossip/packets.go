@@ -158,6 +158,8 @@ type BaseGossiper interface {
 	AddMessage(text string) uint32
 	// AddPrivateMessage
 	AddPrivateMessage(text string, dest string, origin string, hoplimit int)
+	// AddExtraMessage allow to send some extra message via the rumors system
+	AddExtraMessage(paxosMsg *extramessage.ExtraMessage) uint32
 	// AddAddresses takes any number of node addresses that the gossiper can contact
 	// in the gossiping network.
 	AddAddresses(addresses ...string) error

@@ -5,13 +5,16 @@ package gs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/utils"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
@@ -35,13 +38,15 @@ type GroundStation struct {
 	cliConn       net.Conn
 	hub           *Hub
 
+	drones []utils.Vec3d
+
 	handler chan []byte
 }
 
 // NewGroundStation returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.BaseGossiper, addresses ...string) *GroundStation {
+func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.BaseGossiper, drones []utils.Vec3d) *GroundStation {
 	handler := make(chan []byte)
 	gs := &GroundStation{
 		identifier:    identifier,
@@ -49,10 +54,11 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.Base
 		gossipAddress: gossipAddress,
 		gossiper:      g,
 		handler:       handler,
-		hub:           newHub(handler),
+
+		drones: drones,
 	}
 
-	g.RegisterCallback(gs.HandleGossipMessage)
+	g.RegisterCallback(gs.handleGossipMessage)
 	return gs
 }
 
@@ -63,13 +69,15 @@ func (g *GroundStation) Run() {
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
+	g.hub = newHub(g.getInitialData, g.handleWebSocketMessage)
 
 	go g.hub.run()
 
+	// TODO: do we kkep the router ?
 	r := mux.NewRouter()
 
 	r.Methods("GET").Path("/ws").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serveWs(hub, w, r)
+		serveWs(g.hub, w, r)
 	})
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./gs/static/")))
@@ -85,8 +93,42 @@ func (g *GroundStation) Run() {
 	}
 }
 
-// HandleGossipMessage handle gossip messages
-func (g *GroundStation) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
+func (g *GroundStation) getInitialData() []byte {
+	data, _ := json.Marshal(InitMessage{
+		Identifier: g.identifier,
+		Drones:     g.drones,
+	})
+	return data
+}
+
+// handleWebSocketMessage handle websocket messages
+func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
+	var m Message
+	err := json.Unmarshal(message, &m)
+	if err != nil {
+		log.Printf("Error while unmarshaling websocket message. Message dropped")
+		return nil
+	}
+
+	switch v := m.(type) {
+	case TargetMessage:
+		g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
+			SwarmInit: &extramessage.SwarmInit{
+				Initials: g.drones,
+				Targets:  v.targets,
+			},
+		})
+		// Nothing to send back
+		return nil
+	default:
+		// TODO: some case for the other type of message which might come from the webSocket
+		log.Printf("Unknown message send by the websocket")
+		return nil
+	}
+}
+
+// handleGossipMessage handle gossip messages
+func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPacket) {
 	g.Lock()
 	defer g.Unlock()
 
@@ -94,9 +136,8 @@ func (g *GroundStation) HandleGossipMessage(origin string, msg gossip.GossipPack
 
 	// In case of other type of message
 	if msg.Rumor != nil {
-		g.hub.broadcast <- make([]byte)
-		//TODO: Handle messages
-		// log.Info().Msgf("messages %v",)
+		// TODO: parse RUMOR and send appropriate message to the clients
+		// g.hub.wsBroadcast <- make([]byte, 10)
 	}
 }
 

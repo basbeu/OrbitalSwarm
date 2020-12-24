@@ -1,5 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.123/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/controls/OrbitControls.js";
+// import { moveUp } from "./patterns";
 
 let initScene = () => {
    const scene = new THREE.Scene();
@@ -92,6 +93,17 @@ const fakeDronesLocation = () => {
    return drones;
 };
 
+const handleMessage = (sceneData, message) => {
+   if (message.Identifier != null) {
+      document.getElementById("identifier").innerHTML = message.Identifier;
+   }
+
+   if (message.Drones != null && Array.isArray(message.Drones)) {
+      document.getElementById("nbDrone").innerHTML = message.Drones.length;
+      createDrones(sceneData, message.Drones);
+   }
+};
+
 // WebSocket
 if (window["WebSocket"]) {
    let conn = new WebSocket("ws://" + document.location.host + "/ws");
@@ -100,19 +112,14 @@ if (window["WebSocket"]) {
       item.innerHTML = "<b>Connection closed.</b>";
       console.log(item);
    };
-   conn.onmessage = function (evt) {
-      var messages = evt.data.split("\n");
-      for (var i = 0; i < messages.length; i++) {
-         //   var item = document.createElement('div');
-         //   item.innerText = messages[i];
-         // TODO:
-         console.log(item);
-      }
-   };
 
-   const dronesLocation = fakeDronesLocation();
    const sceneData = initScene();
-   createDrones(sceneData, dronesLocation);
+
+   conn.onmessage = function (evt) {
+      const message = JSON.parse(evt.data);
+      handleMessage(sceneData, message);
+      console.log(message);
+   };
 } else {
    var item = document.createElement("div");
    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
