@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/paxos"
+
 	"go.dedis.ch/cs438/orbitalswarm/utils"
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
@@ -49,6 +51,7 @@ type Drone struct {
 	position      utils.Vec3d
 	mapping       *mapping
 	targetsMapper targetsMapper
+	naming        paxos.Naming
 }
 
 // CtrlMessage internal representation of messages for the controller of the UI

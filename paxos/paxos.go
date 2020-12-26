@@ -31,7 +31,7 @@ type Paxos struct {
 	proposedID   int
 	state        int
 	count        int
-	value        *extramessage.Block
+	value        extramessage.Block
 	chanMajority chan bool
 
 	// chain BlockChain
@@ -68,7 +68,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 
 		latestPrepareID:     -1,
 		latestAcceptedID:    -1,
-		latestAcceptedValue: extramessage.Block{},
+		latestAcceptedValue: &extramessage.NamingBlock{},
 
 		learnerCount: 0,
 		learnerData:  make(map[int]int),
@@ -77,7 +77,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 	}
 }
 
-func (p *Paxos) propose(g *gossip.Gossiper, block *extramessage.Block) {
+func (p *Paxos) propose(g *gossip.Gossiper, block extramessage.Block) {
 	go func() {
 		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
 		if p.value == nil {
@@ -123,7 +123,7 @@ func (p *Paxos) propose(g *gossip.Gossiper, block *extramessage.Block) {
 				PaxosPropose: &extramessage.PaxosPropose{
 					PaxosSeqID: p.paxosSequenceID,
 					ID:         id,
-					Value:      *p.value,
+					Value:      p.value,
 				},
 			})
 
@@ -152,7 +152,7 @@ func (p *Paxos) stop() {
 	close(p.chanEnd)
 }
 
-func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *extramessage.Block {
+func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) extramessage.Block {
 	// log.Printf("MANAGE handle")
 
 	// Upon promise
@@ -191,7 +191,7 @@ func (p *Paxos) uponPaxosPrepare(g *gossip.Gossiper, msg *extramessage.PaxosPrep
 					PaxosSeqID: p.paxosSequenceID,
 					IDp:        msg.ID,
 					IDa:        -1,
-					Value:      extramessage.Block{},
+					Value:      &extramessage.NamingBlock{},
 				},
 			})
 		}
@@ -216,8 +216,9 @@ func (p *Paxos) uponPaxosPromise(g *gossip.Gossiper, msg *extramessage.PaxosProm
 
 	if msg.IDp == p.proposedID && p.state == stateAwaitPromise {
 		p.count++
-		if msg.Value.Metahash != nil {
-			p.value = &msg.Value
+		//if msg.Value.Metahash != nil {
+		if !msg.Value.IsContentNil() {
+			p.value = msg.Value
 		}
 
 		if p.count > p.numParticipant/2+1 {
@@ -255,7 +256,7 @@ func (p *Paxos) uponPaxosPropose(g *gossip.Gossiper, msg *extramessage.PaxosProp
 	}
 }
 
-func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) *extramessage.Block {
+func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) extramessage.Block {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded accept %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return nil // Discard
@@ -276,7 +277,7 @@ func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccep
 			p.chanMajority <- true
 			close(p.chanEnd)
 		}
-		return &msg.Value
+		return msg.Value
 	}
 	return nil
 }

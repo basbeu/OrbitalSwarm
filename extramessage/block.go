@@ -6,19 +6,30 @@ import "crypto/sha256"
 // package.
 
 // Block describes the content of a block in the blockchain.
-type Block struct {
-	BlockNumber  int // not included in the hash
-	PreviousHash []byte
+type Block interface {
+	Hash() []byte
+	Copy() Block
+	BlockNumber() int
+	PreviousHash() []byte
+	SetPreviousHash(prevHash []byte)
+	SetContent(block Block)
+	IsContentNil() bool
+}
+
+// NamingBlock ...
+type NamingBlock struct {
+	BlockNum int // not included in the hash
+	PrevHash []byte
 
 	Metahash []byte
 	Filename string
 }
 
 // Hash returns the hash of a block. It doesn't take the index.
-func (b Block) Hash() []byte {
+func (b *NamingBlock) Hash() []byte {
 	h := sha256.New()
 
-	h.Write(b.PreviousHash)
+	h.Write(b.PrevHash)
 
 	h.Write(b.Metahash)
 	h.Write([]byte(b.Filename))
@@ -27,12 +38,36 @@ func (b Block) Hash() []byte {
 }
 
 // Copy performs a deep copy of a block
-func (b Block) Copy() *Block {
-	return &Block{
-		BlockNumber:  b.BlockNumber,
-		PreviousHash: append([]byte{}, b.PreviousHash...),
+func (b *NamingBlock) Copy() Block {
+	return &NamingBlock{
+		BlockNum: b.BlockNum,
+		PrevHash: append([]byte{}, b.PrevHash...),
 
 		Metahash: append([]byte{}, b.Metahash...),
 		Filename: b.Filename,
 	}
+}
+
+func (b *NamingBlock) BlockNumber() int {
+	return b.BlockNum
+}
+
+func (b *NamingBlock) PreviousHash() []byte {
+	return b.PrevHash
+}
+
+func (b *NamingBlock) SetPreviousHash(prevHash []byte) {
+	b.PrevHash = prevHash
+}
+
+func (b *NamingBlock) SetContent(block Block) {
+	namingBlock, ok := block.(*NamingBlock)
+
+	if ok {
+		b.Filename = namingBlock.Filename
+		b.Metahash = namingBlock.Metahash
+	}
+}
+func (b *NamingBlock) IsContentNil() bool {
+	return b.Metahash == nil
 }

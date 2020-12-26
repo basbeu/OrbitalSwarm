@@ -92,7 +92,7 @@ func (n *Naming) getFiles() bool {
 }
 
 func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
-	block := n.blockChain.handleExtraMessage(g, msg)
+	block := n.blockChain.handleExtraMessage(g, msg).(*extramessage.NamingBlock)
 	if block != nil {
 		metahash := hex.EncodeToString(block.Metahash)
 		n.files[block.Filename] = hex.EncodeToString(block.Metahash)
