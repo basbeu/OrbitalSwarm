@@ -7,6 +7,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -74,7 +75,7 @@ func (n *Naming) Propose(g *gossip.Gossiper, metahash string, filename string) (
 	return <-prop.done, nil
 }
 
-func (n *Naming) GetBlocks() (string, map[string]extramessage.Block) {
+func (n *Naming) GetBlocks() (string, map[string]blk.Block) {
 	return n.blockChain.GetBlocks()
 }
 
@@ -92,7 +93,7 @@ func (n *Naming) getFiles() bool {
 }
 
 func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
-	block := n.blockChain.handleExtraMessage(g, msg).(*extramessage.NamingBlock)
+	block := n.blockChain.handleExtraMessage(g, msg).(*blk.NamingBlock)
 	if block != nil {
 		metahash := hex.EncodeToString(block.Metahash)
 		n.files[block.Filename] = hex.EncodeToString(block.Metahash)

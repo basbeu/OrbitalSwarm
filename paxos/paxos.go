@@ -5,6 +5,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -31,14 +32,14 @@ type Paxos struct {
 	proposedID   int
 	state        int
 	count        int
-	value        extramessage.Block
+	value        blk.Block
 	chanMajority chan bool
 
 	// chain BlockChain
 	latestPrepareID     int
 	latestAcceptedID    int
 	acceptedCount       int
-	latestAcceptedValue extramessage.Block
+	latestAcceptedValue blk.Block
 
 	learnerCount int
 	learnerData  map[int]int
@@ -68,7 +69,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 
 		latestPrepareID:     -1,
 		latestAcceptedID:    -1,
-		latestAcceptedValue: &extramessage.NamingBlock{},
+		latestAcceptedValue: &blk.NamingBlock{},
 
 		learnerCount: 0,
 		learnerData:  make(map[int]int),
@@ -77,7 +78,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 	}
 }
 
-func (p *Paxos) propose(g *gossip.Gossiper, block extramessage.Block) {
+func (p *Paxos) propose(g *gossip.Gossiper, block blk.Block) {
 	go func() {
 		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
 		if p.value == nil {
@@ -152,7 +153,7 @@ func (p *Paxos) stop() {
 	close(p.chanEnd)
 }
 
-func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) extramessage.Block {
+func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) blk.Block {
 	// log.Printf("MANAGE handle")
 
 	// Upon promise
@@ -191,7 +192,7 @@ func (p *Paxos) uponPaxosPrepare(g *gossip.Gossiper, msg *extramessage.PaxosPrep
 					PaxosSeqID: p.paxosSequenceID,
 					IDp:        msg.ID,
 					IDa:        -1,
-					Value:      &extramessage.NamingBlock{},
+					Value:      &blk.NamingBlock{},
 				},
 			})
 		}
@@ -256,7 +257,7 @@ func (p *Paxos) uponPaxosPropose(g *gossip.Gossiper, msg *extramessage.PaxosProp
 	}
 }
 
-func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) extramessage.Block {
+func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) blk.Block {
 	if msg.PaxosSeqID != p.paxosSequenceID {
 		// log.Printf("Discarded accept %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return nil // Discard

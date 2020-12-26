@@ -1,20 +1,6 @@
-package extramessage
+package blk
 
 import "crypto/sha256"
-
-// Blockchain data structures. Feel free to move that in a separate file and/or
-// package.
-
-// Block describes the content of a block in the blockchain.
-type Block interface {
-	Hash() []byte
-	Copy() Block
-	BlockNumber() int
-	PreviousHash() []byte
-	SetPreviousHash(prevHash []byte)
-	SetContent(block Block)
-	IsContentNil() bool
-}
 
 // NamingBlock ...
 type NamingBlock struct {
@@ -68,6 +54,7 @@ func (b *NamingBlock) SetContent(block Block) {
 		b.Metahash = namingBlock.Metahash
 	}
 }
+
 func (b *NamingBlock) IsContentNil() bool {
 	return b.Metahash == nil
 }

@@ -3,6 +3,7 @@ package paxos
 import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 )
 
 type TLC struct {
@@ -10,10 +11,10 @@ type TLC struct {
 	numParticipant int
 
 	tlcConfirmed int
-	block        extramessage.Block
+	block        blk.Block
 }
 
-func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, block extramessage.Block) *TLC {
+func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, block blk.Block) *TLC {
 	return &TLC{
 		paxos:          NewPaxos(blockNumber, numParticipant, nodeIndex, paxosRetry),
 		numParticipant: numParticipant,
@@ -23,7 +24,7 @@ func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, 
 	}
 }
 
-func (t *TLC) propose(g *gossip.Gossiper, block extramessage.Block) {
+func (t *TLC) propose(g *gossip.Gossiper, block blk.Block) {
 	proposed := block.Copy()
 	proposed.SetPreviousHash(make([]byte, 0))
 	t.paxos.propose(g, proposed)
@@ -39,7 +40,7 @@ func (t *TLC) stop() {
 	t.paxos.stop()
 }
 
-func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) extramessage.Block {
+func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) blk.Block {
 	if msg.PaxosTLC != nil {
 		if msg.PaxosTLC.Block.BlockNumber() == t.block.BlockNumber() {
 			t.tlcConfirmed++
