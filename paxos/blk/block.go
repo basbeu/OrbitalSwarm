@@ -10,6 +10,17 @@ type Block interface {
 	BlockNumber() int
 	PreviousHash() []byte
 	SetPreviousHash(prevHash []byte)
-	SetContent(block Block)
+	GetContent() BlockContent
+	SetContent(blockContent BlockContent)
 	IsContentNil() bool
+}
+
+type BlockContent interface {
+	Hash() []byte
+	Copy() BlockContent
+}
+
+type BlockFactory interface {
+	NewFirstBlock(blockContent BlockContent) Block
+	NewBlock(blockNumber int, previousHash []byte, content BlockContent) Block
 }

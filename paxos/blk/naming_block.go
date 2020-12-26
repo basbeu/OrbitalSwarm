@@ -7,8 +7,28 @@ type NamingBlock struct {
 	BlockNum int // not included in the hash
 	PrevHash []byte
 
+	content BlockContent
+	//Metahash []byte
+	//Filename string
+}
+
+type NamingBlockContent struct {
 	Metahash []byte
 	Filename string
+}
+
+func (c NamingBlockContent) Hash() []byte {
+	h := sha256.New()
+	h.Write(c.Metahash)
+	h.Write([]byte(c.Filename))
+	return h.Sum(nil)
+}
+
+func (c NamingBlockContent) Copy() BlockContent {
+	return NamingBlockContent{
+		Metahash: append([]byte{}, c.Metahash...),
+		Filename: c.Filename,
+	}
 }
 
 // Hash returns the hash of a block. It doesn't take the index.
@@ -17,8 +37,9 @@ func (b *NamingBlock) Hash() []byte {
 
 	h.Write(b.PrevHash)
 
-	h.Write(b.Metahash)
-	h.Write([]byte(b.Filename))
+	h.Write(b.content.Hash())
+	//h.Write(b.Metahash)
+	//h.Write([]byte(b.Filename))
 
 	return h.Sum(nil)
 }
@@ -29,8 +50,9 @@ func (b *NamingBlock) Copy() Block {
 		BlockNum: b.BlockNum,
 		PrevHash: append([]byte{}, b.PrevHash...),
 
-		Metahash: append([]byte{}, b.Metahash...),
-		Filename: b.Filename,
+		content: b.content.Copy(),
+		//Metahash: append([]byte{}, b.Metahash...),
+		//Filename: b.Filename,
 	}
 }
 
@@ -46,15 +68,42 @@ func (b *NamingBlock) SetPreviousHash(prevHash []byte) {
 	b.PrevHash = prevHash
 }
 
-func (b *NamingBlock) SetContent(block Block) {
-	namingBlock, ok := block.(*NamingBlock)
+func (b *NamingBlock) GetContent() BlockContent {
+	return b.content
+}
+
+func (b *NamingBlock) SetContent(blockContent BlockContent) {
+	namingContent, ok := blockContent.(NamingBlockContent)
 
 	if ok {
-		b.Filename = namingBlock.Filename
-		b.Metahash = namingBlock.Metahash
+		b.content = namingContent.Copy()
 	}
 }
 
 func (b *NamingBlock) IsContentNil() bool {
-	return b.Metahash == nil
+	namingContent := b.content.(NamingBlockContent)
+	return namingContent.Metahash == nil
+}
+
+type NamingBlockFactory struct {
+}
+
+func (f NamingBlockFactory) NewFirstBlock(blockContent BlockContent) Block {
+	return &NamingBlock{
+		BlockNum: 0,
+		PrevHash: make([]byte, 32),
+		content:  blockContent,
+	}
+}
+
+func (f NamingBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) Block {
+	return &NamingBlock{
+		BlockNum: blockNumber,
+		PrevHash: previousHash,
+		content:  content,
+	}
+}
+
+func NewNamingBlockFactory() NamingBlockFactory {
+	return NamingBlockFactory{}
 }

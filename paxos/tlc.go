@@ -53,7 +53,7 @@ func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMess
 		block := t.paxos.handle(g, msg)
 		if block != nil {
 			blockTLC := t.block.Copy()
-			blockTLC.SetContent(block)
+			blockTLC.SetContent(block.GetContent())
 
 			g.AddExtraMessage(&extramessage.ExtraMessage{
 				PaxosTLC: &extramessage.PaxosTLC{

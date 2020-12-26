@@ -17,9 +17,11 @@ type BlockChain struct {
 	tail   blk.Block
 	blocks map[string]blk.Block
 	tlc    *TLC
+
+	blockFactory blk.BlockFactory
 }
 
-func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int) *BlockChain {
+func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int, blockFactory blk.BlockFactory) *BlockChain {
 	blocks := make(map[string]blk.Block)
 
 	return &BlockChain{
@@ -31,29 +33,34 @@ func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int) *BlockChai
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
 		}),
-		tail:   nil,
-		blocks: blocks,
+		tail:         nil,
+		blocks:       blocks,
+		blockFactory: blockFactory,
 	}
 }
 
-func (b *BlockChain) propose(g *gossip.Gossiper, metahash []byte, filename string) {
+//func (b *BlockChain) propose(g *gossip.Gossiper, metahash []byte, filename string) {
+func (b *BlockChain) propose(g *gossip.Gossiper, blockContent blk.BlockContent) {
 	if b.tail == nil {
 		// First block
-		b.tlc.propose(g, &blk.NamingBlock{
+
+		b.tlc.propose(g, b.blockFactory.NewFirstBlock(blockContent))
+		/*b.tlc.propose(g, &blk.NamingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
 
 			Filename: filename,
 			Metahash: metahash,
-		})
+		})*/
 	} else {
-		b.tlc.propose(g, &blk.NamingBlock{
+		b.tlc.propose(g, b.blockFactory.NewBlock(b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
+		/*b.tlc.propose(g, &blk.NamingBlock{
 			BlockNum: b.tail.BlockNumber() + 1,
 			PrevHash: b.tail.Hash(),
 
 			Filename: filename,
 			Metahash: metahash,
-		})
+		})*/
 	}
 }
 

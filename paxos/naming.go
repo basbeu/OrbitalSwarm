@@ -31,7 +31,7 @@ type Naming struct {
 
 func NewNaming(numParticipant int, nodeIndex int, paxosRetry int) *Naming {
 	return &Naming{
-		blockChain: NewBlockchain(numParticipant, nodeIndex, paxosRetry),
+		blockChain: NewBlockchain(numParticipant, nodeIndex, paxosRetry, blk.NewNamingBlockFactory()),
 
 		files:    make(map[string]string),
 		proposed: false,
@@ -68,7 +68,11 @@ func (n *Naming) Propose(g *gossip.Gossiper, metahash string, filename string) (
 	if !n.proposed {
 		log.Printf("Propose value")
 		n.proposed = true
-		n.blockChain.propose(g, hash, filename)
+		//n.blockChain.propose(g, hash, filename)
+		n.blockChain.propose(g, blk.NamingBlockContent{
+			Metahash: hash,
+			Filename: filename,
+		})
 	}
 	n.mutex.Unlock()
 
@@ -95,8 +99,9 @@ func (n *Naming) getFiles() bool {
 func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
 	block := n.blockChain.handleExtraMessage(g, msg).(*blk.NamingBlock)
 	if block != nil {
-		metahash := hex.EncodeToString(block.Metahash)
-		n.files[block.Filename] = hex.EncodeToString(block.Metahash)
+		blockContent := block.GetContent().(blk.NamingBlockContent)
+		metahash := hex.EncodeToString(blockContent.Metahash)
+		n.files[blockContent.Filename] = hex.EncodeToString(blockContent.Metahash)
 
 		// Propose next file if any
 		n.mutex.Lock()
@@ -107,14 +112,18 @@ func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraM
 		for _, p := range n.pending {
 			// resolved
 			if p.metahash == metahash {
-				p.done <- block.Filename
+				p.done <- blockContent.Filename
 				close(p.done)
 			} else if !n.proposed {
 				data, err := hex.DecodeString(p.metahash)
 				if err != nil {
 					log.Printf("Unable to decode metahash string")
 				}
-				n.blockChain.propose(g, data, p.filename)
+				//n.blockChain.propose(g, data, p.filename)
+				n.blockChain.propose(g, blk.NamingBlockContent{
+					Metahash: data,
+					Filename: p.filename,
+				})
 				n.proposed = true
 				pendings = append(pendings, p)
 			} else {
