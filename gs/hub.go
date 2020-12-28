@@ -4,6 +4,11 @@
 
 package gs
 
+type wsMessage struct {
+	data   []byte
+	client *Client
+}
+
 // Hub maintains the set of active clients and broadcasts messages to the
 // clients.
 type Hub struct {
@@ -11,7 +16,14 @@ type Hub struct {
 	clients map[*Client]bool
 
 	// Inbound messages from the clients.
-	broadcast chan []byte
+	wsReceived chan wsMessage
+
+	// Outbound messages for the clients.
+	wsBroadcast chan []byte
+
+	// Callbacks
+	onClientJoin      func() []byte
+	onMessageReceived func([]byte) []byte
 
 	// Register requests from the clients.
 	register chan *Client
@@ -20,12 +32,15 @@ type Hub struct {
 	unregister chan *Client
 }
 
-func newHub() *Hub {
+func newHub(onClientJoin func() []byte, onMessageReceived func([]byte) []byte) *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		wsReceived: make(chan wsMessage),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
+
+		onClientJoin:      onClientJoin,
+		onMessageReceived: onMessageReceived,
 	}
 }
 
@@ -34,12 +49,13 @@ func (h *Hub) run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
+			client.send <- h.onClientJoin()
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
 			}
-		case message := <-h.broadcast:
+		case message := <-h.wsBroadcast:
 			for client := range h.clients {
 				select {
 				case client.send <- message:
@@ -47,6 +63,13 @@ func (h *Hub) run() {
 					close(client.send)
 					delete(h.clients, client)
 				}
+			}
+		case message := <-h.wsReceived:
+			select {
+			case message.client.send <- h.onMessageReceived(message.data):
+			default:
+				close(message.client.send)
+				delete(h.clients, message.client)
 			}
 		}
 	}
