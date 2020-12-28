@@ -2,7 +2,7 @@ package utils
 
 import "math"
 
-// Vec3d represents an immutable minimal tri-dimensional vector
+// Vec3d represents an mutable minimal tri-dimensional vector
 type Vec3d struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
