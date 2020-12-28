@@ -74,8 +74,8 @@ func (s *Swarm) Run() {
 }
 
 // Stop every drone composing the Swarm
-func (swarm *Swarm) Stop() {
-	close(swarm.stop)
+func (s *Swarm) Stop() {
+	close(s.stop)
 }
 
 // DronesAddresses return the drone addresses
@@ -85,13 +85,4 @@ func (s *Swarm) DronesAddresses() []string {
 		addresses[i] = d.gossipAddress
 	}
 	return addresses
-}
-
-// DronesLocations return the drone locations
-func (s *Swarm) DronesLocations() []utils.Vec3d {
-	locations := make([]utils.Vec3d, len(s.drones))
-	for i, d := range s.drones {
-		locations[i] = d.position
-	}
-	return locations
 }
