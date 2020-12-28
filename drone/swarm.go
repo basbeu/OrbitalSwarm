@@ -27,13 +27,15 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 	positions := make([]utils.Vec3d, numDrones)
 	line := 0
 	column := 0
+	space := 2
+
 	edge := int(math.Sqrt(float64(numDrones)))
 	for i := 0; i < numDrones; i++ {
 		gossipAddress := fmt.Sprintf("%s:%d", baseGossipAddress, firstGossipPort+i)
 		gossipAddresses[i] = gossipAddress
 		UIAddress := fmt.Sprintf("%s:%d", baseUIAddress, firstUIPort+i)
 		UIAddresses[i] = UIAddress
-		positions[i] = utils.NewVec3d(float64(line), float64(column), 0)
+		positions[i] = utils.NewVec3d(float64(line*space), 0, float64(column*space))
 		column = (column + 1) % edge
 		if column == 0 {
 			line++
@@ -59,8 +61,8 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 }
 
 // Run the drones composing the drones, this function is blocking until the the stop function is called
-func (swarm *Swarm) Run() {
-	for _, drone := range swarm.drones {
+func (s *Swarm) Run() {
+	for _, drone := range s.drones {
 		ready := make(chan struct{})
 		go drone.gossiper.Run(ready)
 		defer drone.gossiper.Stop()
@@ -68,10 +70,19 @@ func (swarm *Swarm) Run() {
 
 		go drone.Run()
 	}
-	<-swarm.stop
+	<-s.stop
 }
 
 // Stop every drone composing the Swarm
-func (swarm *Swarm) Stop() {
-	close(swarm.stop)
+func (s *Swarm) Stop() {
+	close(s.stop)
+}
+
+// DronesAddresses return the drone addresses
+func (s *Swarm) DronesAddresses() []string {
+	addresses := make([]string, len(s.drones))
+	for i, d := range s.drones {
+		addresses[i] = d.gossipAddress
+	}
+	return addresses
 }

@@ -6,7 +6,7 @@ import (
 
 //
 type targetsMapper interface {
-	mapTargets(initials map[string]utils.Vec3d, targets []utils.Vec3d) map[string]utils.Vec3d
+	mapTargets(initials []utils.Vec3d, targets []utils.Vec3d) map[string]utils.Vec3d
 }
 
 type hungarianGraphConsensus struct {
@@ -16,7 +16,7 @@ func newHungarianGraphConsensus() *hungarianGraphConsensus {
 	return &hungarianGraphConsensus{}
 }
 
-func (mapper *hungarianGraphConsensus) mapTargets(initials map[string]utils.Vec3d, targets []utils.Vec3d) map[string]utils.Vec3d {
+func (mapper *hungarianGraphConsensus) mapTargets(initials []utils.Vec3d, targets []utils.Vec3d) map[string]utils.Vec3d {
 	//TODO
 	return make(map[string]utils.Vec3d)
 }

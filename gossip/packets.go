@@ -3,6 +3,7 @@ package gossip
 // ========== CS-438 orbitalswarm Skeleton ===========
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -138,7 +139,7 @@ type GossipFactory interface {
 }
 
 // BaseGossiper ...
-/*type BaseGossiper interface {
+type BaseGossiper interface {
 	BroadcastMessage(GossipPacket)
 	RegisterHandler(handler interface{}) error
 	// GetNodes returns the list of nodes this gossiper knows currently in the
@@ -157,6 +158,8 @@ type GossipFactory interface {
 	AddMessage(text string) uint32
 	// AddPrivateMessage
 	AddPrivateMessage(text string, dest string, origin string, hoplimit int)
+	// AddExtraMessage allow to send some extra message via the rumors system
+	AddExtraMessage(paxosMsg *extramessage.ExtraMessage) uint32
 	// AddAddresses takes any number of node addresses that the gossiper can contact
 	// in the gossiping network.
 	AddAddresses(addresses ...string) error
@@ -179,4 +182,4 @@ type GossipFactory interface {
 	GetRoutingTable() map[string]*RouteStruct
 	// GetLocalAddr returns the local address (ip:port) used for sending and receiving packets to/from the network.
 	GetLocalAddr() string
-}*/
+}
