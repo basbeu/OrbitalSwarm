@@ -57,15 +57,8 @@ func TestGossiper_No_Contention_Single_Propose(t *testing.T) {
 	inD := nD.getIns(ctx)
 	inE := nE.getIns(ctx)
 
-	//nA.addFile(t, "test1.txt", []byte{0xAA})
-	//nA.gossiper.IndexShares("test1.txt")
-	//naming := paxos.NewNaming(5, 0, 1000)
-	//drone := NewDrone(nA.gossiper.GetIdentifier(), "", "", nA.gossiper.(*gossip.Gossiper), nA.gossiper.GetNodes(), utils.Vec3d{}, newHungarianGraphConsensus(), newMapping(), naming)
-
 	metahash := hex.EncodeToString([]byte{0xAA})
 	nA.drone.ProposeName(metahash, "test1.txt")
-	//naming.Propose(nA.gossiper.(*gossip.Gossiper), metahash, "test1.txt")
-
 	time.Sleep(time.Second * 1)
 
 	getPrepare := func(h *history) int {
