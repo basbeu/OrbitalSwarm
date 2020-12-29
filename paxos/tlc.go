@@ -4,7 +4,6 @@ import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
-	"go.dedis.ch/onet/v3/log"
 )
 
 type TLC struct {
@@ -29,12 +28,6 @@ func (t *TLC) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 	proposed := block.Copy()
 	proposed.SetPreviousHash(make([]byte, 0))
 	t.paxos.propose(g, proposed)
-	/*t.paxos.propose(g, &extramessage.NamingBlock{
-		BlockNum: block.BlockNumber(),
-		Filename: block.Filename,
-		Metahash: block.Metahash,
-		PrevHash: make([]byte, 0),
-	})*/
 }
 
 func (t *TLC) stop() {
@@ -46,7 +39,7 @@ func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMess
 		if msg.PaxosTLC.Value.BlockNumber() == t.block.BlockNumber() {
 			t.tlcConfirmed++
 			if t.tlcConfirmed >= t.numParticipant/2+1 {
-				log.Printf("%s Consensus of consensus !", g.GetIdentifier())
+				//log.Printf("%s Consensus of consensus !", g.GetIdentifier())
 				return msg.PaxosTLC.Value
 			}
 		}
@@ -60,12 +53,6 @@ func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMess
 			g.AddExtraMessage(&extramessage.ExtraMessage{
 				PaxosTLC: &extramessage.PaxosTLC{
 					Value: blockTLC,
-					/*&extramessage.NamingBlock{
-						BlockNum: t.block.BlockNumber(),
-						PrevHash: t.block.PreviousHash(),
-						Filename: block.Filename,
-						Metahash: block.Metahash,
-					},*/
 				},
 			})
 		}

@@ -43,11 +43,21 @@ type BlockFactory interface {
 }
 
 func (b *BlockContainer) UnmarshalJSON(data []byte) error {
+	//Setup blocktypes
+	blockTypes := map[string]reflect.Type{
+		blockNamingStr: reflect.TypeOf(NamingBlock{}),
+	}
+	blockContentTypes := map[string]reflect.Type{
+		blockNamingStr: reflect.TypeOf(NamingBlockContent{}),
+	}
+
+	//Unmarshall in generic map[string]interface{}
 	m := map[string]interface{}{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return err
 	}
 
+	//Check the json and extract fields
 	blockTypeInterface, typeExists := m["Type"]
 	blockMapInterface, blockExists := m["Block"]
 
@@ -58,7 +68,6 @@ func (b *BlockContainer) UnmarshalJSON(data []byte) error {
 	if !ok {
 		return xerrors.New("Not a valid BlockContainer, BlockType not valid")
 	}
-
 	if blockMapInterface == nil {
 		return nil
 	}
@@ -66,19 +75,35 @@ func (b *BlockContainer) UnmarshalJSON(data []byte) error {
 	if !ok {
 		return xerrors.New("Not a valid BlockContainer, BlockMap not valid")
 	}
+	blockContentMap, ok := blockMap["Content"]
+	if !ok {
+		return xerrors.New("Not a valid BlockContainer, Block.Content not valid")
+	}
 
-	blockContentMap := blockMap["Content"]
-	blockContentJSON, _ := json.Marshal(blockContentMap)
-	blockContent := reflect.New(reflect.TypeOf(NamingBlockContent{})).Interface().(BlockContent)
-	json.Unmarshal(blockContentJSON, &blockContent)
+	//Unmarshal blockContent
+	blockContentJSON, err := json.Marshal(blockContentMap)
+	if err != nil {
+		return err
+	}
+	t := blockContentTypes[blockType]
+	blockContent := reflect.New(t).Interface().(BlockContent)
+	if err = json.Unmarshal(blockContentJSON, blockContent); err != nil {
+		return err
+	}
 
-	blockJSON, _ := json.Marshal(blockMap)
-	block := NamingBlock{}
-	json.Unmarshal(blockJSON, &block)
-	block.Content = blockContent
+	//Unmarshal Block
+	blockJSON, err := json.Marshal(blockMap)
+	if err != nil {
+		return err
+	}
+	t = blockTypes[blockType]
+	block := reflect.New(t).Interface().(Block)
+	json.Unmarshal(blockJSON, &block) // This method return an non-nil error because that BlockContent cannot be unmarshalled directly
+	block.SetContent(blockContent)
 
+	//Set BlockContainer attributes
 	b.Type = blockType
-	b.Block = &block
+	b.Block = block
 
 	return nil
 }

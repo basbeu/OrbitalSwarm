@@ -160,16 +160,16 @@ func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.
 
 	// Upon promise
 	if msg.PaxosPrepare != nil {
-		log.Printf("Handle prepare %d vs %d ID %d", msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.ID)
+		//log.Printf("Handle prepare %d vs %d ID %d", msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.ID)
 		p.uponPaxosPrepare(g, msg.PaxosPrepare)
 	} else if msg.PaxosPromise != nil {
-		log.Printf("Handle promise %d vs %d ID %d", msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.IDp)
+		//log.Printf("Handle promise %d vs %d ID %d", msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.IDp)
 		p.uponPaxosPromise(g, msg.PaxosPromise)
 	} else if msg.PaxosPropose != nil {
-		log.Printf("Handle propose %d vs %d ID %d", msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.ID)
+		//log.Printf("Handle propose %d vs %d ID %d", msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.ID)
 		p.uponPaxosPropose(g, msg.PaxosPropose)
 	} else if msg.PaxosAccept != nil {
-		log.Printf("Handle accept %d vs %d ID %d", msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.ID)
+		//log.Printf("Handle accept %d vs %d ID %d", msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.ID)
 		return p.uponPaxosAccept(g, msg.PaxosAccept)
 	}
 	return nil
@@ -219,7 +219,6 @@ func (p *Paxos) uponPaxosPromise(g *gossip.Gossiper, msg *extramessage.PaxosProm
 
 	if msg.IDp == p.proposedID && p.state == stateAwaitPromise {
 		p.count++
-		//if msg.Value.Metahash != nil {
 		if !msg.Value.IsContentNil() {
 			p.value = msg.Value
 		}

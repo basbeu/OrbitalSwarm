@@ -8,8 +8,6 @@ type NamingBlock struct {
 	PrevHash []byte
 
 	Content BlockContent
-	//Metahash []byte
-	//Filename string
 }
 
 type NamingBlockContent struct {
@@ -17,15 +15,15 @@ type NamingBlockContent struct {
 	Filename string
 }
 
-func (c NamingBlockContent) Hash() []byte {
+func (c *NamingBlockContent) Hash() []byte {
 	h := sha256.New()
 	h.Write(c.Metahash)
 	h.Write([]byte(c.Filename))
 	return h.Sum(nil)
 }
 
-func (c NamingBlockContent) Copy() BlockContent {
-	return NamingBlockContent{
+func (c *NamingBlockContent) Copy() BlockContent {
+	return &NamingBlockContent{
 		Metahash: append([]byte{}, c.Metahash...),
 		Filename: c.Filename,
 	}
@@ -36,10 +34,7 @@ func (b *NamingBlock) Hash() []byte {
 	h := sha256.New()
 
 	h.Write(b.PrevHash)
-
 	h.Write(b.Content.Hash())
-	//h.Write(b.Metahash)
-	//h.Write([]byte(b.Filename))
 
 	return h.Sum(nil)
 }
@@ -57,8 +52,6 @@ func (b *NamingBlock) Copy() Block {
 		PrevHash: append([]byte{}, b.PrevHash...),
 
 		Content: b.Content.Copy(),
-		//Metahash: append([]byte{}, b.Metahash...),
-		//Filename: b.Filename,
 	}
 }
 
@@ -79,7 +72,7 @@ func (b *NamingBlock) GetContent() BlockContent {
 }
 
 func (b *NamingBlock) SetContent(blockContent BlockContent) {
-	namingContent, ok := blockContent.(NamingBlockContent)
+	namingContent, ok := blockContent.(*NamingBlockContent)
 
 	if ok {
 		b.Content = namingContent.Copy()
@@ -87,7 +80,7 @@ func (b *NamingBlock) SetContent(blockContent BlockContent) {
 }
 
 func (b *NamingBlock) IsContentNil() bool {
-	namingContent := b.Content.(NamingBlockContent)
+	namingContent := b.Content.(*NamingBlockContent)
 	return namingContent.Metahash == nil
 }
 

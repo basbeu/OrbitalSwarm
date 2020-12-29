@@ -42,22 +42,8 @@ func (b *BlockChain) propose(g *gossip.Gossiper, blockContent blk.BlockContent) 
 		// First block
 
 		b.tlc.propose(g, b.blockFactory.NewFirstBlock(blockContent))
-		/*b.tlc.propose(g, &blk.NamingBlock{
-			BlockNum: 0,
-			PrevHash: make([]byte, 32),
-
-			Filename: filename,
-			Metahash: metahash,
-		})*/
 	} else {
 		b.tlc.propose(g, b.blockFactory.NewBlock(b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
-		/*b.tlc.propose(g, &blk.NamingBlock{
-			BlockNum: b.tail.BlockNumber() + 1,
-			PrevHash: b.tail.Hash(),
-
-			Filename: filename,
-			Metahash: metahash,
-		})*/
 	}
 }
 

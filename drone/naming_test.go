@@ -377,7 +377,7 @@ func TestGossiper_No_Contention_Block_Consensus(t *testing.T) {
 			expected := &blk.NamingBlock{
 				BlockNum: 0,
 				PrevHash: make([]byte, 32),
-				Content: blk.NamingBlockContent{
+				Content: &blk.NamingBlockContent{
 					Filename: "test1.txt",
 					Metahash: metaHash,
 				},
@@ -446,7 +446,7 @@ func TestGossiper_No_Contention_Block_TLC_Consensus(t *testing.T) {
 	expectedBlock := &blk.NamingBlock{
 		BlockNum: 0,
 		PrevHash: make([]byte, 32),
-		Content: blk.NamingBlockContent{
+		Content: &blk.NamingBlockContent{
 			Filename: "test1.txt",
 			Metahash: metaHash,
 		},
@@ -620,7 +620,7 @@ func TestGossiper_Contention_Single_Block_Consensus(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name1,
 				Metahash: metaHash1,
 			},
@@ -632,7 +632,7 @@ func TestGossiper_Contention_Single_Block_Consensus(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name2,
 				Metahash: metaHash2,
 			},
@@ -789,7 +789,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name1,
 				Metahash: metaHash1,
 			},
@@ -801,7 +801,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name2,
 				Metahash: metaHash2,
 			},
@@ -864,8 +864,8 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	// We check that the block with at least three occurrences is not the same
 	// one as the first block.
 
-	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(blk.NamingBlockContent).Metahash, firstBlock.Block.GetContent().(blk.NamingBlockContent).Metahash)
-	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(blk.NamingBlockContent).Filename, firstBlock.Block.GetContent().(blk.NamingBlockContent).Filename)
+	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(*blk.NamingBlockContent).Metahash, firstBlock.Block.GetContent().(*blk.NamingBlockContent).Metahash)
+	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(*blk.NamingBlockContent).Filename, firstBlock.Block.GetContent().(*blk.NamingBlockContent).Filename)
 
 	require.True(t, threeFound)
 
@@ -874,7 +874,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 1,
 			PrevHash: firstBlock.Hash(),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name1,
 				Metahash: metaHash1,
 			},
@@ -886,7 +886,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 		Block: &blk.NamingBlock{
 			BlockNum: 1,
 			PrevHash: firstBlock.Hash(),
-			Content: blk.NamingBlockContent{
+			Content: &blk.NamingBlockContent{
 				Filename: name2,
 				Metahash: metaHash2,
 			},
@@ -953,8 +953,8 @@ func TestGossiper_No_Contention_Long_Blockchain(t *testing.T) {
 		blockContainer := blocks[lastBlock]
 		block := blockContainer.Block.(*blk.NamingBlock)
 
-		require.Equal(t, metaHash, block.Content.(blk.NamingBlockContent).Metahash)
-		require.Equal(t, fileName, block.Content.(blk.NamingBlockContent).Filename)
+		require.Equal(t, metaHash, block.Content.(*blk.NamingBlockContent).Metahash)
+		require.Equal(t, fileName, block.Content.(*blk.NamingBlockContent).Filename)
 		require.Equal(t, proposalIndex, block.BlockNum)
 
 		proposalIndex++
@@ -1001,8 +1001,8 @@ func TestGossiper_No_Contention_Long_Blockchain(t *testing.T) {
 
 				lastBlockContainer := chain[last]
 				lastBlock := lastBlockContainer.Block.(*blk.NamingBlock)
-				require.Equal(t, filename, lastBlock.GetContent().(blk.NamingBlockContent).Filename)
-				require.Equal(t, metaHash, lastBlock.GetContent().(blk.NamingBlockContent).Metahash)
+				require.Equal(t, filename, lastBlock.GetContent().(*blk.NamingBlockContent).Filename)
+				require.Equal(t, metaHash, lastBlock.GetContent().(*blk.NamingBlockContent).Metahash)
 				require.Equal(t, numProposals-1, lastBlock.BlockNum)
 			}
 		}
@@ -1077,8 +1077,8 @@ func TestGossiper_No_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 		blockContainer := blocks[lastBlock]
 		block := blockContainer.Block.(*blk.NamingBlock)
 
-		require.Equal(t, metaHash, block.GetContent().(blk.NamingBlockContent).Metahash)
-		require.Equal(t, fileName, block.GetContent().(blk.NamingBlockContent).Filename)
+		require.Equal(t, metaHash, block.GetContent().(*blk.NamingBlockContent).Metahash)
+		require.Equal(t, fileName, block.GetContent().(*blk.NamingBlockContent).Filename)
 		require.Equal(t, proposalIndex, block.BlockNum)
 
 		proposalIndex++
@@ -1122,8 +1122,8 @@ func TestGossiper_No_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 
 				lastBlockContainer := chain[last]
 				lastBlock := lastBlockContainer.Block.(*blk.NamingBlock)
-				require.Equal(t, filename, lastBlock.GetContent().(blk.NamingBlockContent).Filename)
-				require.Equal(t, metaHash, lastBlock.GetContent().(blk.NamingBlockContent).Metahash)
+				require.Equal(t, filename, lastBlock.GetContent().(*blk.NamingBlockContent).Filename)
+				require.Equal(t, metaHash, lastBlock.GetContent().(*blk.NamingBlockContent).Metahash)
 				require.Equal(t, numProposals-1, lastBlock.BlockNum)
 			}
 		}
@@ -1391,7 +1391,7 @@ func TestGossiper_Unique_Filename(t *testing.T) {
 				Block: &blk.NamingBlock{
 					BlockNum: 0,
 					PrevHash: make([]byte, 32),
-					Content: blk.NamingBlockContent{
+					Content: &blk.NamingBlockContent{
 						Filename: filename,
 						Metahash: metaHash,
 					},
@@ -1494,7 +1494,7 @@ func TestGossiper_Unique_Metahash(t *testing.T) {
 				Block: &blk.NamingBlock{
 					BlockNum: 0,
 					PrevHash: make([]byte, 32),
-					Content: blk.NamingBlockContent{
+					Content: &blk.NamingBlockContent{
 						Filename: filename,
 						Metahash: metaHash,
 					},
