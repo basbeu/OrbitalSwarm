@@ -4,14 +4,18 @@ package drone
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 
 	"github.com/stretchr/testify/require"
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
@@ -108,7 +112,6 @@ func TestGossiper_No_Contention_Single_Propose(t *testing.T) {
 	require.True(t, bReceived+cReceived+dReceived+eReceived >= 3)
 }
 
-/*
 // Test 2
 // Node A proposes a file, we check that the other nodes got the PROPOSE message
 // Node receive the ACCEPT messages back.
@@ -137,13 +140,13 @@ func TestGossiper_No_Contention_Single_Accept(t *testing.T) {
 	inD := nD.getIns(ctx)
 	inE := nE.getIns(ctx)
 
-	nA.addFile(t, "test1.txt", []byte{0xAA})
-	nA.gossiper.IndexShares("test1.txt")
+	metahash := hex.EncodeToString([]byte{0xAA})
+	nA.drone.ProposeName(metahash, "test1.txt")
 
 	time.Sleep(time.Second * 1)
 
-	getAccept := func(h *history) []*types.PaxosAccept {
-		res := []*types.PaxosAccept{}
+	getAccept := func(h *history) []*extramessage.PaxosAccept {
+		res := []*extramessage.PaxosAccept{}
 
 		h.Lock()
 		defer h.Unlock()
@@ -217,13 +220,13 @@ func TestGossiper_No_Contention_Single_Consensus_Completion(t *testing.T) {
 	inD := nD.getIns(ctx)
 	inE := nE.getIns(ctx)
 
-	nA.addFile(t, "test1.txt", []byte{0xAA})
-	nA.gossiper.IndexShares("test1.txt")
+	metahash := hex.EncodeToString([]byte{0xAA})
+	nA.drone.ProposeName(metahash, "test1.txt")
 
 	time.Sleep(time.Second * 2)
 
 	getAccept := func(h *history) int {
-		res := []*types.PaxosAccept{}
+		res := []*extramessage.PaxosAccept{}
 
 		h.Lock()
 		defer h.Unlock()
@@ -282,13 +285,13 @@ func TestGossiper_No_Contention_Single_Retry(t *testing.T) {
 
 	outA := nA.getOuts(ctx)
 
-	nA.addFile(t, "test1.txt", []byte{0xAA})
-	go nA.gossiper.IndexShares("test1.txt")
+	metahash := hex.EncodeToString([]byte{0xAA})
+	go nA.drone.ProposeName(metahash, "test1.txt")
 
 	time.Sleep(time.Second * 1)
 
-	getPrepare := func(h *history) []*types.PaxosPrepare {
-		res := []*types.PaxosPrepare{}
+	getPrepare := func(h *history) []*extramessage.PaxosPrepare {
+		res := []*extramessage.PaxosPrepare{}
 
 		h.Lock()
 		defer h.Unlock()
@@ -358,25 +361,28 @@ func TestGossiper_No_Contention_Block_Consensus(t *testing.T) {
 	h.Write(chunk)
 	metaHash := h.Sum(nil)
 
-	nA.addFile(t, "test1.txt", content)
-	nA.gossiper.IndexShares("test1.txt")
+	metahash := hex.EncodeToString(metaHash)
+	nA.drone.ProposeName(metahash, "test1.txt")
 
 	time.Sleep(time.Second * 2)
 
-	aLast, aChain := nA.gossiper.GetBlocks()
-	bLast, bChain := nB.gossiper.GetBlocks()
-	cLast, cChain := nC.gossiper.GetBlocks()
-	dLast, dChain := nD.gossiper.GetBlocks()
-	eLast, eChain := nE.gossiper.GetBlocks()
+	aLast, aChain := nA.drone.naming.GetBlocks()
+	bLast, bChain := nB.drone.naming.GetBlocks()
+	cLast, cChain := nC.drone.naming.GetBlocks()
+	dLast, dChain := nD.drone.naming.GetBlocks()
+	eLast, eChain := nE.drone.naming.GetBlocks()
 
-	checkBlock := func(last string, chain map[string]types.Block) int {
+	checkBlock := func(last string, chain map[string]*blk.BlockContainer) int {
 		if len(chain) == 1 {
-			block := chain[aLast]
-			expected := types.Block{
-				BlockNumber:  0,
-				Filename:     "test1.txt",
-				Metahash:     metaHash,
-				PreviousHash: make([]byte, 32),
+			blockContainer := chain[aLast]
+			block := blockContainer.Block
+			expected := &blk.NamingBlock{
+				BlockNum: 0,
+				PrevHash: make([]byte, 32),
+				Content: blk.NamingBlockContent{
+					Filename: "test1.txt",
+					Metahash: metaHash,
+				},
 			}
 			require.Equal(t, expected, block)
 
@@ -434,16 +440,18 @@ func TestGossiper_No_Contention_Block_TLC_Consensus(t *testing.T) {
 	h.Write(chunk)
 	metaHash := h.Sum(nil)
 
-	nA.addFile(t, "test1.txt", content)
-	nA.gossiper.IndexShares("test1.txt")
+	metahash := hex.EncodeToString(metaHash)
+	nA.drone.ProposeName(metahash, "test1.txt")
 
 	time.Sleep(time.Second * 2)
 
-	expectedBlock := types.Block{
-		BlockNumber:  0,
-		Filename:     "test1.txt",
-		Metahash:     metaHash,
-		PreviousHash: make([]byte, 32),
+	expectedBlock := &blk.NamingBlock{
+		BlockNum: 0,
+		PrevHash: make([]byte, 32),
+		Content: blk.NamingBlockContent{
+			Filename: "test1.txt",
+			Metahash: metaHash,
+		},
 	}
 
 	getTLC := func(h *history) int {
@@ -455,9 +463,9 @@ func TestGossiper_No_Contention_Block_TLC_Consensus(t *testing.T) {
 		for _, msg := range h.p {
 			if msg.message.Rumor != nil &&
 				msg.message.Rumor.Extra != nil &&
-				msg.message.Rumor.Extra.TLC != nil {
+				msg.message.Rumor.Extra.PaxosTLC != nil {
 
-				require.Equal(t, expectedBlock, msg.message.Rumor.Extra.TLC.Block)
+				require.Equal(t, expectedBlock, msg.message.Rumor.Extra.PaxosTLC.Value.Block)
 				count++
 			}
 		}
@@ -523,36 +531,37 @@ func TestGossiper_Contention_Single_Block_Consensus(t *testing.T) {
 	lb := newLinkBuilder(nodes)
 	lb.connectAll()
 
-	nA.addFile(t, name1, content1)
-	nB.addFile(t, name2, content2)
+	metahash1 := hex.EncodeToString(metaHash1)
+	metahash2 := hex.EncodeToString(metaHash2)
 
-	go nA.gossiper.IndexShares(name1)
-	go nB.gossiper.IndexShares(name2)
+	go nA.drone.ProposeName(metahash1, name1)
+	go nB.drone.ProposeName(metahash2, name2)
 
 	time.Sleep(time.Second * 2)
 
-	aLast, aChain := nA.gossiper.GetBlocks()
-	bLast, bChain := nB.gossiper.GetBlocks()
-	cLast, cChain := nC.gossiper.GetBlocks()
-	dLast, dChain := nD.gossiper.GetBlocks()
-	eLast, eChain := nE.gossiper.GetBlocks()
+	aLast, aChain := nA.drone.naming.GetBlocks()
+	bLast, bChain := nB.drone.naming.GetBlocks()
+	cLast, cChain := nC.drone.naming.GetBlocks()
+	dLast, dChain := nD.drone.naming.GetBlocks()
+	eLast, eChain := nE.drone.naming.GetBlocks()
 
-	getFirst := func(last string, chain map[string]types.Block) (types.Block, bool) {
+	getFirst := func(last string, chain map[string]*blk.BlockContainer) (*blk.BlockContainer, bool) {
 		if last == "" {
-			return types.Block{}, false
+			return &blk.BlockContainer{}, false
 		}
 
 		for {
-			block := chain[last]
-			if block.BlockNumber == 0 {
-				return block, true
+			blockContainer := chain[last]
+			block := blockContainer.Block.(*blk.NamingBlock)
+			if block.BlockNum == 0 {
+				return blockContainer, true
 			}
 
-			last = hex.EncodeToString(block.PreviousHash)
+			last = hex.EncodeToString(block.PrevHash)
 		}
 	}
 
-	mergeChain := func(block types.Block, chainCount map[string]int, chainMerged map[string]types.Block) {
+	mergeChain := func(block *blk.BlockContainer, chainCount map[string]int, chainMerged map[string]*blk.BlockContainer) {
 		key := hex.EncodeToString(block.Hash())
 
 		_, ok := chainCount[key]
@@ -565,7 +574,7 @@ func TestGossiper_Contention_Single_Block_Consensus(t *testing.T) {
 	}
 
 	countBlocks := map[string]int{}
-	mergedBlocks := map[string]types.Block{}
+	mergedBlocks := map[string]*blk.BlockContainer{}
 
 	aFirst, ok := getFirst(aLast, aChain)
 	if ok {
@@ -608,21 +617,31 @@ func TestGossiper_Contention_Single_Block_Consensus(t *testing.T) {
 	// We check that the block with at least three occurrences is the expected
 	// one.
 
-	block1 := types.Block{
-		BlockNumber:  0,
-		Filename:     name1,
-		Metahash:     metaHash1,
-		PreviousHash: make([]byte, 32),
+	block1 := &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 0,
+			PrevHash: make([]byte, 32),
+			Content: blk.NamingBlockContent{
+				Filename: name1,
+				Metahash: metaHash1,
+			},
+		},
 	}
 
-	block2 := types.Block{
-		BlockNumber:  0,
-		Filename:     name2,
-		Metahash:     metaHash2,
-		PreviousHash: make([]byte, 32),
+	block2 := &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 0,
+			PrevHash: make([]byte, 32),
+			Content: blk.NamingBlockContent{
+				Filename: name2,
+				Metahash: metaHash2,
+			},
+		},
 	}
 
-	allPotentialBlocks := []types.Block{
+	allPotentialBlocks := []*blk.BlockContainer{
 		block1,
 		block2,
 	}
@@ -676,41 +695,42 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	lb := newLinkBuilder(nodes)
 	lb.connectAll()
 
-	nA.addFile(t, name1, content1)
-	nB.addFile(t, name2, content2)
+	metahash1 := hex.EncodeToString(metaHash1)
+	metahash2 := hex.EncodeToString(metaHash2)
 
-	go nA.gossiper.IndexShares(name1)
-	go nB.gossiper.IndexShares(name2)
+	go nA.drone.ProposeName(metahash1, name1)
+	go nB.drone.ProposeName(metahash2, name2)
 
 	time.Sleep(time.Second * 10)
 
-	aLast, aChain := nA.gossiper.GetBlocks()
-	bLast, bChain := nB.gossiper.GetBlocks()
-	cLast, cChain := nC.gossiper.GetBlocks()
-	dLast, dChain := nD.gossiper.GetBlocks()
-	eLast, eChain := nE.gossiper.GetBlocks()
+	aLast, aChain := nA.drone.naming.GetBlocks()
+	bLast, bChain := nB.drone.naming.GetBlocks()
+	cLast, cChain := nC.drone.naming.GetBlocks()
+	dLast, dChain := nD.drone.naming.GetBlocks()
+	eLast, eChain := nE.drone.naming.GetBlocks()
 
-	getBlockByIndex := func(index int, last string, chain map[string]types.Block) (types.Block, bool) {
+	getBlockByIndex := func(index int, last string, chain map[string]*blk.BlockContainer) (*blk.BlockContainer, bool) {
 		if last == "" {
-			return types.Block{}, false
+			return &blk.BlockContainer{}, false
 		}
 
 		for {
-			block := chain[last]
-			if block.BlockNumber == index {
-				return block, true
+			blockContainer := chain[last]
+			block := blockContainer.Block.(*blk.NamingBlock)
+			if block.BlockNum == index {
+				return blockContainer, true
 			}
 
 			// no block found
-			if block.BlockNumber == 0 {
-				return types.Block{}, false
+			if block.BlockNum == 0 {
+				return &blk.BlockContainer{}, false
 			}
 
-			last = hex.EncodeToString(block.PreviousHash)
+			last = hex.EncodeToString(block.PrevHash)
 		}
 	}
 
-	mergeChain := func(block types.Block, chainCount map[string]int, chainMerged map[string]types.Block) {
+	mergeChain := func(block *blk.BlockContainer, chainCount map[string]int, chainMerged map[string]*blk.BlockContainer) {
 		key := hex.EncodeToString(block.Hash())
 
 		_, ok := chainCount[key]
@@ -723,7 +743,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	}
 
 	countBlocks := map[string]int{}
-	mergedBlocks := map[string]types.Block{}
+	mergedBlocks := map[string]*blk.BlockContainer{}
 
 	aFirst, ok := getBlockByIndex(0, aLast, aChain)
 	if ok {
@@ -766,21 +786,31 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	// We check that the block with at least three occurrences is the expected
 	// one.
 
-	block1 := types.Block{
-		BlockNumber:  0,
-		Filename:     name1,
-		Metahash:     metaHash1,
-		PreviousHash: make([]byte, 32),
+	block1 := &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 0,
+			PrevHash: make([]byte, 32),
+			Content: blk.NamingBlockContent{
+				Filename: name1,
+				Metahash: metaHash1,
+			},
+		},
 	}
 
-	block2 := types.Block{
-		BlockNumber:  0,
-		Filename:     name2,
-		Metahash:     metaHash2,
-		PreviousHash: make([]byte, 32),
+	block2 := &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 0,
+			PrevHash: make([]byte, 32),
+			Content: blk.NamingBlockContent{
+				Filename: name2,
+				Metahash: metaHash2,
+			},
+		},
 	}
 
-	allPotentialBlocks := []types.Block{
+	allPotentialBlocks := []*blk.BlockContainer{
 		block1,
 		block2,
 	}
@@ -793,7 +823,7 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	// We do the same for the second block
 
 	countBlocks = map[string]int{}
-	mergedBlocks = map[string]types.Block{}
+	mergedBlocks = map[string]*blk.BlockContainer{}
 
 	aFirst, ok = getBlockByIndex(1, aLast, aChain)
 	if ok {
@@ -836,26 +866,36 @@ func TestGossiper_Contention_TLC_Retry(t *testing.T) {
 	// We check that the block with at least three occurrences is not the same
 	// one as the first block.
 
-	require.NotEqual(t, mergedBlocks[keyFound].Metahash, firstBlock.Metahash)
-	require.NotEqual(t, mergedBlocks[keyFound].Filename, firstBlock.Filename)
+	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(blk.NamingBlockContent).Metahash, firstBlock.Block.GetContent().(blk.NamingBlockContent).Metahash)
+	require.NotEqual(t, mergedBlocks[keyFound].Block.GetContent().(blk.NamingBlockContent).Filename, firstBlock.Block.GetContent().(blk.NamingBlockContent).Filename)
 
 	require.True(t, threeFound)
 
-	block1 = types.Block{
-		BlockNumber:  1,
-		Filename:     name1,
-		Metahash:     metaHash1,
-		PreviousHash: firstBlock.Hash(),
+	block1 = &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 1,
+			PrevHash: firstBlock.Hash(),
+			Content: blk.NamingBlockContent{
+				Filename: name1,
+				Metahash: metaHash1,
+			},
+		},
 	}
 
-	block2 = types.Block{
-		BlockNumber:  1,
-		Filename:     name2,
-		Metahash:     metaHash2,
-		PreviousHash: firstBlock.Hash(),
+	block2 = &blk.BlockContainer{
+		Type: "NamingBlock",
+		Block: &blk.NamingBlock{
+			BlockNum: 1,
+			PrevHash: firstBlock.Hash(),
+			Content: blk.NamingBlockContent{
+				Filename: name2,
+				Metahash: metaHash2,
+			},
+		},
 	}
 
-	allPotentialBlocks = []types.Block{
+	allPotentialBlocks = []*blk.BlockContainer{
 		block1,
 		block2,
 	}
@@ -899,24 +939,25 @@ func TestGossiper_No_Contention_Long_Blockchain(t *testing.T) {
 		h.Write(chunk)
 		metaHash := h.Sum(nil)
 
-		_, blocks := node.gossiper.GetBlocks()
+		_, blocks := node.drone.naming.GetBlocks()
 		blockN := len(blocks)
 
-		node.addFile(t, fileName, content)
-		node.gossiper.IndexShares(fileName)
+		metahash := hex.EncodeToString(metaHash)
+		node.drone.ProposeName(metahash, fileName)
 
-		lastBlock, blocks := node.gossiper.GetBlocks()
+		lastBlock, blocks := node.drone.naming.GetBlocks()
 
 		for len(blocks) == blockN {
 			time.Sleep(time.Millisecond * 500)
-			lastBlock, blocks = node.gossiper.GetBlocks()
+			lastBlock, blocks = node.drone.naming.GetBlocks()
 		}
 
-		block := blocks[lastBlock]
+		blockContainer := blocks[lastBlock]
+		block := blockContainer.Block.(*blk.NamingBlock)
 
-		require.Equal(t, metaHash, block.Metahash)
-		require.Equal(t, fileName, block.Filename)
-		require.Equal(t, proposalIndex, block.BlockNumber)
+		require.Equal(t, metaHash, block.Content.(blk.NamingBlockContent).Metahash)
+		require.Equal(t, fileName, block.Content.(blk.NamingBlockContent).Filename)
+		require.Equal(t, proposalIndex, block.BlockNum)
 
 		proposalIndex++
 
@@ -953,17 +994,18 @@ func TestGossiper_No_Contention_Long_Blockchain(t *testing.T) {
 		hasBlocks := 0
 
 		checkBlocks := func(node *nodeInfo) {
-			last, chain := node.gossiper.GetBlocks()
+			last, chain := node.drone.naming.GetBlocks()
 
 			time.Sleep(time.Millisecond * 100)
 
 			if len(chain) == numProposals {
 				hasBlocks++
 
-				lastBlock := chain[last]
-				require.Equal(t, filename, lastBlock.Filename)
-				require.Equal(t, metaHash, lastBlock.Metahash)
-				require.Equal(t, numProposals-1, lastBlock.BlockNumber)
+				lastBlockContainer := chain[last]
+				lastBlock := lastBlockContainer.Block.(*blk.NamingBlock)
+				require.Equal(t, filename, lastBlock.GetContent().(blk.NamingBlockContent).Filename)
+				require.Equal(t, metaHash, lastBlock.GetContent().(blk.NamingBlockContent).Metahash)
+				require.Equal(t, numProposals-1, lastBlock.BlockNum)
 			}
 		}
 
@@ -1021,24 +1063,25 @@ func TestGossiper_No_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 		h.Write(chunk)
 		metaHash := h.Sum(nil)
 
-		_, blocks := node.gossiper.GetBlocks()
+		_, blocks := node.drone.naming.GetBlocks()
 		blockN := len(blocks)
 
-		node.addFile(t, fileName, content)
-		node.gossiper.IndexShares(fileName)
+		metahash := hex.EncodeToString(metaHash)
+		node.drone.ProposeName(metahash, fileName)
 
-		lastBlock, blocks := node.gossiper.GetBlocks()
+		lastBlock, blocks := node.drone.naming.GetBlocks()
 
 		for len(blocks) == blockN {
 			time.Sleep(time.Millisecond * 500)
-			lastBlock, blocks = node.gossiper.GetBlocks()
+			lastBlock, blocks = node.drone.naming.GetBlocks()
 		}
 
-		block := blocks[lastBlock]
+		blockContainer := blocks[lastBlock]
+		block := blockContainer.Block.(*blk.NamingBlock)
 
-		require.Equal(t, metaHash, block.Metahash)
-		require.Equal(t, fileName, block.Filename)
-		require.Equal(t, proposalIndex, block.BlockNumber)
+		require.Equal(t, metaHash, block.GetContent().(blk.NamingBlockContent).Metahash)
+		require.Equal(t, fileName, block.GetContent().(blk.NamingBlockContent).Filename)
+		require.Equal(t, proposalIndex, block.BlockNum)
 
 		proposalIndex++
 
@@ -1074,15 +1117,16 @@ func TestGossiper_No_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 		hasBlocks := 0
 
 		checkBlocks := func(node *nodeInfo) {
-			last, chain := node.gossiper.GetBlocks()
+			last, chain := node.drone.naming.GetBlocks()
 
 			if len(chain) == numProposals {
 				hasBlocks++
 
-				lastBlock := chain[last]
-				require.Equal(t, filename, lastBlock.Filename)
-				require.Equal(t, metaHash, lastBlock.Metahash)
-				require.Equal(t, numProposals-1, lastBlock.BlockNumber)
+				lastBlockContainer := chain[last]
+				lastBlock := lastBlockContainer.Block.(*blk.NamingBlock)
+				require.Equal(t, filename, lastBlock.GetContent().(blk.NamingBlockContent).Filename)
+				require.Equal(t, metaHash, lastBlock.GetContent().(blk.NamingBlockContent).Metahash)
+				require.Equal(t, numProposals-1, lastBlock.BlockNum)
 			}
 		}
 
@@ -1136,8 +1180,8 @@ func TestGossiper_Contention_Long_Blockchain(t *testing.T) {
 		h.Write(chunk)
 		metaHash := h.Sum(nil)
 
-		node.addFile(t, fileName, content)
-		node.gossiper.IndexShares(fileName)
+		metahash := hex.EncodeToString(metaHash)
+		node.drone.ProposeName(metahash, fileName)
 
 		return fileName, metaHash
 	}
@@ -1178,7 +1222,7 @@ func TestGossiper_Contention_Long_Blockchain(t *testing.T) {
 		// We check that at least N/2 - 1 other nodes have numProposals blocks
 
 		for _, n := range nodes {
-			_, chain := n.gossiper.GetBlocks()
+			_, chain := n.drone.naming.GetBlocks()
 
 			time.Sleep(time.Millisecond * 100)
 
@@ -1232,8 +1276,8 @@ func TestGossiper_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 		h.Write(chunk)
 		metaHash := h.Sum(nil)
 
-		node.addFile(t, fileName, content)
-		node.gossiper.IndexShares(fileName)
+		metahash := hex.EncodeToString(metaHash)
+		node.drone.ProposeName(metahash, fileName)
 
 		return fileName, metaHash
 	}
@@ -1274,7 +1318,7 @@ func TestGossiper_Contention_Higher_Nodes_Long_Blockchain(t *testing.T) {
 		// We check that at least N/2 - 1 other nodes have numProposals blocks
 
 		for _, n := range nodes {
-			_, chain := n.gossiper.GetBlocks()
+			_, chain := n.drone.naming.GetBlocks()
 
 			time.Sleep(time.Millisecond * 100)
 
@@ -1330,25 +1374,30 @@ func TestGossiper_Unique_Filename(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	nD.addFile(t, filename, content)
-	nD.gossiper.IndexShares(filename)
+	metahash := hex.EncodeToString(metaHash)
+	nD.drone.ProposeName(metahash, filename)
 
 	time.Sleep(time.Second * 10)
 
-	aLast, aChain := nA.gossiper.GetBlocks()
-	bLast, bChain := nB.gossiper.GetBlocks()
-	cLast, cChain := nC.gossiper.GetBlocks()
-	dLast, dChain := nD.gossiper.GetBlocks()
-	eLast, eChain := nE.gossiper.GetBlocks()
+	aLast, aChain := nA.drone.naming.GetBlocks()
+	bLast, bChain := nB.drone.naming.GetBlocks()
+	cLast, cChain := nC.drone.naming.GetBlocks()
+	dLast, dChain := nD.drone.naming.GetBlocks()
+	eLast, eChain := nE.drone.naming.GetBlocks()
 
-	checkBlock := func(last string, chain map[string]types.Block) int {
+	checkBlock := func(last string, chain map[string]*blk.BlockContainer) int {
 		if len(chain) == 1 {
 			block := chain[aLast]
-			expected := types.Block{
-				BlockNumber:  0,
-				Filename:     filename,
-				Metahash:     metaHash,
-				PreviousHash: make([]byte, 32),
+			expected := &blk.BlockContainer{
+				Type: "NamingBlock",
+				Block: &blk.NamingBlock{
+					BlockNum: 0,
+					PrevHash: make([]byte, 32),
+					Content: blk.NamingBlockContent{
+						Filename: filename,
+						Metahash: metaHash,
+					},
+				},
 			}
 			require.Equal(t, expected, block)
 
@@ -1369,17 +1418,25 @@ func TestGossiper_Unique_Filename(t *testing.T) {
 	// C tries to register the same filename
 
 	content = []byte{0xBB}
+	// Compute the metahash
+	h = sha256.New()
+	h.Write(content)
+	chunk = h.Sum(nil)
 
-	nC.addFile(t, filename, content)
-	nC.gossiper.IndexShares(filename)
+	h = sha256.New()
+	h.Write(chunk)
+	metaHash = h.Sum(nil)
+
+	metahash = hex.EncodeToString(metaHash)
+	nC.drone.ProposeName(metahash, filename)
 
 	time.Sleep(time.Second * 2)
 
-	_, aChain = nA.gossiper.GetBlocks()
-	_, bChain = nB.gossiper.GetBlocks()
-	_, cChain = nC.gossiper.GetBlocks()
-	_, dChain = nD.gossiper.GetBlocks()
-	_, eChain = nE.gossiper.GetBlocks()
+	_, aChain = nA.drone.naming.GetBlocks()
+	_, bChain = nB.drone.naming.GetBlocks()
+	_, cChain = nC.drone.naming.GetBlocks()
+	_, dChain = nD.drone.naming.GetBlocks()
+	_, eChain = nE.drone.naming.GetBlocks()
 
 	require.Len(t, aChain, 1)
 	require.Len(t, bChain, 1)
@@ -1420,25 +1477,30 @@ func TestGossiper_Unique_Metahash(t *testing.T) {
 	h.Write(chunk)
 	metaHash := h.Sum(nil)
 
-	nC.addFile(t, filename, content)
-	nC.gossiper.IndexShares(filename)
+	metahash := hex.EncodeToString(metaHash)
+	nC.drone.ProposeName(metahash, filename)
 
 	time.Sleep(time.Second * 2)
 
-	aLast, aChain := nA.gossiper.GetBlocks()
-	bLast, bChain := nB.gossiper.GetBlocks()
-	cLast, cChain := nC.gossiper.GetBlocks()
-	dLast, dChain := nD.gossiper.GetBlocks()
-	eLast, eChain := nE.gossiper.GetBlocks()
+	aLast, aChain := nA.drone.naming.GetBlocks()
+	bLast, bChain := nB.drone.naming.GetBlocks()
+	cLast, cChain := nC.drone.naming.GetBlocks()
+	dLast, dChain := nD.drone.naming.GetBlocks()
+	eLast, eChain := nE.drone.naming.GetBlocks()
 
-	checkBlock := func(last string, chain map[string]types.Block) int {
+	checkBlock := func(last string, chain map[string]*blk.BlockContainer) int {
 		if len(chain) == 1 {
 			block := chain[aLast]
-			expected := types.Block{
-				BlockNumber:  0,
-				Filename:     filename,
-				Metahash:     metaHash,
-				PreviousHash: make([]byte, 32),
+			expected := &blk.BlockContainer{
+				Type: "NamingBlock",
+				Block: &blk.NamingBlock{
+					BlockNum: 0,
+					PrevHash: make([]byte, 32),
+					Content: blk.NamingBlockContent{
+						Filename: filename,
+						Metahash: metaHash,
+					},
+				},
 			}
 			require.Equal(t, expected, block)
 
@@ -1460,16 +1522,15 @@ func TestGossiper_Unique_Metahash(t *testing.T) {
 
 	filename = "test2.txt"
 
-	nC.addFile(t, filename, content)
-	nC.gossiper.IndexShares(filename)
+	nC.drone.ProposeName(metahash, filename)
 
 	time.Sleep(time.Second * 2)
 
-	_, aChain = nA.gossiper.GetBlocks()
-	_, bChain = nB.gossiper.GetBlocks()
-	_, cChain = nC.gossiper.GetBlocks()
-	_, dChain = nD.gossiper.GetBlocks()
-	_, eChain = nE.gossiper.GetBlocks()
+	_, aChain = nA.drone.naming.GetBlocks()
+	_, bChain = nB.drone.naming.GetBlocks()
+	_, cChain = nC.drone.naming.GetBlocks()
+	_, dChain = nD.drone.naming.GetBlocks()
+	_, eChain = nE.drone.naming.GetBlocks()
 
 	require.Len(t, aChain, 1)
 	require.Len(t, bChain, 1)
@@ -1477,7 +1538,7 @@ func TestGossiper_Unique_Metahash(t *testing.T) {
 	require.Len(t, dChain, 1)
 	require.Len(t, eChain, 1)
 }
-*/
+
 // -----------------------------------------------------------------------------
 // Utility functions
 
