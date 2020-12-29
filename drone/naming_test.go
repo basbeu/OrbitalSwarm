@@ -7,9 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -1546,11 +1544,7 @@ type nodeInfo struct {
 	addr     string
 	id       string
 	gossiper gossip.BaseGossiper
-	folder   string
 	stream   chan gossip.GossipPacket // optional
-
-	// file created in the working directory that must be deleted
-	localFiles []string
 
 	template nodeTemplate
 	drone    *Drone
@@ -1563,14 +1557,6 @@ func newNodeInfo(g gossip.BaseGossiper, addr string, t nodeTemplate) *nodeInfo {
 		gossiper: g,
 		template: t,
 	}
-}
-
-func (n nodeInfo) shareDir() string {
-	return n.template.sharedDataFolder
-}
-
-func (n nodeInfo) downloadDir() string {
-	return n.template.downloadFolder
 }
 
 func (n nodeInfo) getIns(ctx context.Context) *history {
@@ -1617,28 +1603,8 @@ func (n nodeInfo) getCallbacks(ctx context.Context) *history {
 	return msgs
 }
 
-// addFile adds a file to the current working directory. This is needed because
-// the indexFile method looks for the file in that place.
-func (n *nodeInfo) addFile(t *testing.T, name string, content []byte) {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	err = ioutil.WriteFile(wd+"/"+name, content, os.ModePerm)
-	require.NoError(t, err)
-
-	n.localFiles = append(n.localFiles, wd+"/"+name)
-}
-
 func (n *nodeInfo) stop() {
 	n.gossiper.Stop()
-
-	if n.folder != "" {
-		os.RemoveAll(n.folder)
-	}
-
-	for _, localFile := range n.localFiles {
-		os.Remove(localFile)
-	}
 }
 
 func createAndStartNode(t *testing.T, name string, opts ...nodeOption) nodeInfo {
@@ -1661,30 +1627,7 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 
 	fullName := fmt.Sprintf("%v---%v", name, t.Name())
 
-	var folder string
 	var err error
-
-	if template.sharedDataFolder == "" || template.downloadFolder == "" {
-		folder, err = ioutil.TempDir("", "gossiper-"+name+"-")
-		require.NoError(t, err)
-
-		if template.sharedDataFolder == "" {
-			err = os.Mkdir(folder+"/"+sharedDataFolder, os.ModePerm)
-			require.NoError(t, err)
-
-			_, err = os.Create(folder + "/" + sharedDataFolder + "/indexedState.json")
-			require.NoError(t, err)
-
-			template.sharedDataFolder = folder + "/" + sharedDataFolder
-		}
-
-		if template.downloadFolder == "" {
-			err = os.Mkdir(folder+"/"+downloadFolder, os.ModePerm)
-			require.NoError(t, err)
-
-			template.downloadFolder = folder + "/" + downloadFolder
-		}
-	}
 
 	node, err := fac.New(addr, fullName, template.antiEntropy, template.routeTimer,
 		template.numParticipants,
@@ -1700,7 +1643,6 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 	return nodeInfo{
 		id:       node.GetIdentifier(),
 		gossiper: node,
-		folder:   folder,
 		template: *template,
 		drone:    drone,
 	}
@@ -1709,9 +1651,6 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 type nodeTemplate struct {
 	antiEntropy int
 	routeTimer  int
-
-	sharedDataFolder string
-	downloadFolder   string
 
 	numParticipants int
 	nodeIndex       int
@@ -1748,18 +1687,6 @@ func WithAntiEntropy(value int) nodeOption {
 func WithRouteTimer(value int) nodeOption {
 	return func(n *nodeTemplate) {
 		n.routeTimer = value
-	}
-}
-
-func WithSharedDataFolder(folder string) nodeOption {
-	return func(n *nodeTemplate) {
-		n.sharedDataFolder = folder
-	}
-}
-
-func WithDownloadFolder(folder string) nodeOption {
-	return func(n *nodeTemplate) {
-		n.downloadFolder = folder
 	}
 }
 
