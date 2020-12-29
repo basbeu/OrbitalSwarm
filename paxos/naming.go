@@ -79,7 +79,7 @@ func (n *Naming) Propose(g *gossip.Gossiper, metahash string, filename string) (
 	return <-prop.done, nil
 }
 
-func (n *Naming) GetBlocks() (string, map[string]blk.Block) {
+func (n *Naming) GetBlocks() (string, map[string]*blk.BlockContainer) {
 	return n.blockChain.GetBlocks()
 }
 
@@ -97,7 +97,12 @@ func (n *Naming) getFiles() bool {
 }
 
 func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
-	block := n.blockChain.handleExtraMessage(g, msg).(*blk.NamingBlock)
+	blockContainer := n.blockChain.handleExtraMessage(g, msg)
+	if blockContainer == nil {
+		return
+	}
+
+	block := blockContainer.Block.(*blk.NamingBlock)
 	if block != nil {
 		blockContent := block.GetContent().(blk.NamingBlockContent)
 		metahash := hex.EncodeToString(blockContent.Metahash)

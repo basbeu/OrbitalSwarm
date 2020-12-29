@@ -50,7 +50,7 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 
 	if e.PaxosTLC != nil {
 		paxosTLC = new(PaxosTLC)
-		paxosTLC.Block = e.PaxosTLC.Block.Copy()
+		paxosTLC.Value = e.PaxosTLC.Value.Copy()
 	}
 
 	return &ExtraMessage{
