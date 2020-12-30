@@ -87,7 +87,7 @@ func (b *NamingBlock) IsContentNil() bool {
 type NamingBlockFactory struct {
 }
 
-func (f NamingBlockFactory) NewFirstBlock(blockContent BlockContent) *BlockContainer {
+func (f NamingBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
 	return &BlockContainer{
 		Type: blockNamingStr,
 		Block: &NamingBlock{

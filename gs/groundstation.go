@@ -114,8 +114,8 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 	case TargetMessage:
 		g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
 			SwarmInit: &extramessage.SwarmInit{
-				DronePos:  g.drones,
-				TargetPos: v.targets,
+				InitialPos: g.drones,
+				TargetPos:  v.targets,
 			},
 		})
 		// Nothing to send back
