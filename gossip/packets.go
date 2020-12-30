@@ -135,7 +135,7 @@ type NewMessageCallback func(origin string, message GossipPacket)
 // GossipFactory provides the primitive to instantiate a new Gossiper
 type GossipFactory interface {
 	New(address, identifier string, antiEntropy int, routeTimer int,
-		numParticipant int, nodeIndex, paxosRetry int) (BaseGossiper, error)
+		numParticipant int, nodeIndex, paxosRetry int) (*Gossiper, error)
 }
 
 // BaseGossiper ...

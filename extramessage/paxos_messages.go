@@ -1,5 +1,7 @@
 package extramessage
 
+import "go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+
 // PaxosPrepare describes a PREPARE request to an acceptor.
 type PaxosPrepare struct {
 	PaxosSeqID int
@@ -15,7 +17,8 @@ type PaxosPromise struct {
 	IDp        int
 
 	IDa   int
-	Value Block
+	Value *blk.BlockContainer
+	//Value blk.Block
 }
 
 // PaxosPropose describes a PROPOSE request made by a proposer to an ACCEPTOR.
@@ -23,7 +26,7 @@ type PaxosPropose struct {
 	PaxosSeqID int
 	ID         int
 
-	Value Block
+	Value *blk.BlockContainer
 }
 
 // PaxosAccept describes an ACCEPT request that is sent by an acceptor to its
@@ -32,11 +35,11 @@ type PaxosAccept struct {
 	PaxosSeqID int
 	ID         int
 
-	Value Block
+	Value *blk.BlockContainer
 }
 
 // PaxosTLC is the message sent by a node when it knows consensus has been reached
 // for that block.
 type PaxosTLC struct {
-	Block Block
+	Value *blk.BlockContainer
 }

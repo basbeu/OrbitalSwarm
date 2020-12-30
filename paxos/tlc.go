@@ -3,6 +3,7 @@ package paxos
 import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 )
 
 type TLC struct {
@@ -10,12 +11,12 @@ type TLC struct {
 	numParticipant int
 
 	tlcConfirmed int
-	block        extramessage.Block
+	block        *blk.BlockContainer
 }
 
-func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, block extramessage.Block) *TLC {
+func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, block *blk.BlockContainer, blockFactory blk.BlockFactory) *TLC {
 	return &TLC{
-		paxos:          NewPaxos(blockNumber, numParticipant, nodeIndex, paxosRetry),
+		paxos:          NewPaxos(blockNumber, numParticipant, nodeIndex, paxosRetry, blockFactory),
 		numParticipant: numParticipant,
 
 		tlcConfirmed: 0,
@@ -23,39 +24,35 @@ func NewTLC(numParticipant int, nodeIndex int, paxosRetry int, blockNumber int, 
 	}
 }
 
-func (t *TLC) propose(g *gossip.Gossiper, block *extramessage.Block) {
-	t.paxos.propose(g, &extramessage.Block{
-		BlockNumber:  block.BlockNumber,
-		Filename:     block.Filename,
-		Metahash:     block.Metahash,
-		PreviousHash: make([]byte, 0),
-	})
+func (t *TLC) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
+	proposed := block.Copy()
+	proposed.SetPreviousHash(make([]byte, 0))
+	t.paxos.propose(g, proposed)
 }
 
 func (t *TLC) stop() {
 	t.paxos.stop()
 }
 
-func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *extramessage.Block {
+func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	if msg.PaxosTLC != nil {
-		if msg.PaxosTLC.Block.BlockNumber == t.block.BlockNumber {
+		if msg.PaxosTLC.Value.BlockNumber() == t.block.BlockNumber() {
 			t.tlcConfirmed++
 			if t.tlcConfirmed >= t.numParticipant/2+1 {
-				// log.Printf("%s Consensus of consensus !", g.identifier)
-				return &msg.PaxosTLC.Block
+				//log.Printf("%s Consensus of consensus !", g.GetIdentifier())
+				return msg.PaxosTLC.Value
 			}
 		}
 	} else {
 		block := t.paxos.handle(g, msg)
+
 		if block != nil {
+			blockTLC := t.block.Copy()
+			blockTLC.SetContent(block.GetContent())
+
 			g.AddExtraMessage(&extramessage.ExtraMessage{
 				PaxosTLC: &extramessage.PaxosTLC{
-					Block: extramessage.Block{
-						BlockNumber:  t.block.BlockNumber,
-						PreviousHash: t.block.PreviousHash,
-						Filename:     block.Filename,
-						Metahash:     block.Metahash,
-					},
+					Value: blockTLC,
 				},
 			})
 		}

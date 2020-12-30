@@ -31,26 +31,26 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 		paxosPromise.PaxosSeqID = e.PaxosPromise.PaxosSeqID
 		paxosPromise.IDp = e.PaxosPromise.IDp
 		paxosPromise.IDa = e.PaxosPromise.IDa
-		paxosPromise.Value = *(e.PaxosPromise.Value.Copy())
+		paxosPromise.Value = (e.PaxosPromise.Value.Copy())
 	}
 
 	if e.PaxosPropose != nil {
 		paxosPropose = new(PaxosPropose)
 		paxosPropose.PaxosSeqID = e.PaxosPropose.PaxosSeqID
 		paxosPropose.ID = e.PaxosPropose.ID
-		paxosPropose.Value = *(e.PaxosPropose.Value.Copy())
+		paxosPropose.Value = (e.PaxosPropose.Value.Copy())
 	}
 
 	if e.PaxosAccept != nil {
 		paxosAccept = new(PaxosAccept)
 		paxosAccept.PaxosSeqID = e.PaxosAccept.PaxosSeqID
 		paxosAccept.ID = e.PaxosAccept.ID
-		paxosAccept.Value = *(e.PaxosAccept.Value.Copy())
+		paxosAccept.Value = (e.PaxosAccept.Value.Copy())
 	}
 
 	if e.PaxosTLC != nil {
 		paxosTLC = new(PaxosTLC)
-		paxosTLC.Block = *e.PaxosTLC.Block.Copy()
+		paxosTLC.Value = e.PaxosTLC.Value.Copy()
 	}
 
 	return &ExtraMessage{

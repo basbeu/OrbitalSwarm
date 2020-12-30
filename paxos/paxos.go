@@ -5,6 +5,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 	"go.dedis.ch/onet/v3/log"
 )
 
@@ -31,14 +32,15 @@ type Paxos struct {
 	proposedID   int
 	state        int
 	count        int
-	value        *extramessage.Block
+	value        *blk.BlockContainer
 	chanMajority chan bool
 
 	// chain BlockChain
+	blockFactory        blk.BlockFactory
 	latestPrepareID     int
 	latestAcceptedID    int
 	acceptedCount       int
-	latestAcceptedValue extramessage.Block
+	latestAcceptedValue *blk.BlockContainer
 
 	learnerCount int
 	learnerData  map[int]int
@@ -48,7 +50,7 @@ type Paxos struct {
 }
 
 // NewPaxos create a new paxos
-func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry int) *Paxos {
+func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry int, blockFactory blk.BlockFactory) *Paxos {
 	seqGen := newSeqGen(nodeIndex, numParticipant)
 
 	return &Paxos{
@@ -66,9 +68,10 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 		value:        nil,
 		chanMajority: make(chan bool),
 
+		blockFactory:        blockFactory,
 		latestPrepareID:     -1,
 		latestAcceptedID:    -1,
-		latestAcceptedValue: extramessage.Block{},
+		latestAcceptedValue: blockFactory.NewEmptyBlock(),
 
 		learnerCount: 0,
 		learnerData:  make(map[int]int),
@@ -77,7 +80,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 	}
 }
 
-func (p *Paxos) propose(g *gossip.Gossiper, block *extramessage.Block) {
+func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 	go func() {
 		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
 		if p.value == nil {
@@ -123,7 +126,7 @@ func (p *Paxos) propose(g *gossip.Gossiper, block *extramessage.Block) {
 				PaxosPropose: &extramessage.PaxosPropose{
 					PaxosSeqID: p.paxosSequenceID,
 					ID:         id,
-					Value:      *p.value,
+					Value:      p.value,
 				},
 			})
 
@@ -152,21 +155,21 @@ func (p *Paxos) stop() {
 	close(p.chanEnd)
 }
 
-func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *extramessage.Block {
+func (p *Paxos) handle(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	// log.Printf("MANAGE handle")
 
 	// Upon promise
 	if msg.PaxosPrepare != nil {
-		// log.Printf("Handle prepare %d vs %d ID %d", msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.ID)
+		//log.Printf("Handle prepare %d vs %d ID %d", msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.PaxosSeqID, msg.PaxosPrepare.ID)
 		p.uponPaxosPrepare(g, msg.PaxosPrepare)
 	} else if msg.PaxosPromise != nil {
-		// log.Printf("Handle promise %d vs %d ID %d", msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.IDp)
+		//log.Printf("Handle promise %d vs %d ID %d", msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.PaxosSeqID, msg.PaxosPromise.IDp)
 		p.uponPaxosPromise(g, msg.PaxosPromise)
 	} else if msg.PaxosPropose != nil {
-		// log.Printf("Handle propose %d vs %d ID %d", msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.ID)
+		//log.Printf("Handle propose %d vs %d ID %d", msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.PaxosSeqID, msg.PaxosPropose.ID)
 		p.uponPaxosPropose(g, msg.PaxosPropose)
 	} else if msg.PaxosAccept != nil {
-		// log.Printf("Handle accept %d vs %d ID %d", msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.ID)
+		//log.Printf("Handle accept %d vs %d ID %d", msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.PaxosSeqID, msg.PaxosAccept.ID)
 		return p.uponPaxosAccept(g, msg.PaxosAccept)
 	}
 	return nil
@@ -191,7 +194,7 @@ func (p *Paxos) uponPaxosPrepare(g *gossip.Gossiper, msg *extramessage.PaxosPrep
 					PaxosSeqID: p.paxosSequenceID,
 					IDp:        msg.ID,
 					IDa:        -1,
-					Value:      extramessage.Block{},
+					Value:      p.blockFactory.NewEmptyBlock(),
 				},
 			})
 		}
@@ -216,8 +219,8 @@ func (p *Paxos) uponPaxosPromise(g *gossip.Gossiper, msg *extramessage.PaxosProm
 
 	if msg.IDp == p.proposedID && p.state == stateAwaitPromise {
 		p.count++
-		if msg.Value.Metahash != nil {
-			p.value = &msg.Value
+		if !msg.Value.IsContentNil() {
+			p.value = msg.Value
 		}
 
 		if p.count > p.numParticipant/2+1 {
@@ -255,9 +258,9 @@ func (p *Paxos) uponPaxosPropose(g *gossip.Gossiper, msg *extramessage.PaxosProp
 	}
 }
 
-func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) *extramessage.Block {
+func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccept) *blk.BlockContainer {
 	if msg.PaxosSeqID != p.paxosSequenceID {
-		// log.Printf("Discarded accept %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
+		//log.Printf("Discarded accept %d vs %d", msg.PaxosSeqID, p.paxosSequenceID)
 		return nil // Discard
 	}
 
@@ -269,14 +272,15 @@ func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccep
 	}
 	p.learnerData[msg.ID] = count
 
-	if count > p.numParticipant/2+1 {
+	// > or >= ??
+	if count >= p.numParticipant/2+1 {
 		p.acceptedCount = 0
 		if msg.ID == p.proposedID && p.state == stateAwaitAccept {
 			p.state = stateConsensus
 			p.chanMajority <- true
 			close(p.chanEnd)
 		}
-		return &msg.Value
+		return msg.Value
 	}
 	return nil
 }

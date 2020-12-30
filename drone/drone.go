@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"go.dedis.ch/cs438/orbitalswarm/paxos"
+
 	"go.dedis.ch/cs438/orbitalswarm/utils"
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
@@ -44,11 +45,13 @@ type Drone struct {
 	uiAddress     string
 	identifier    string
 	gossipAddress string
-	gossiper      gossip.BaseGossiper
+	gossiper      *gossip.Gossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
-	naming        paxos.Naming
 	position      utils.Vec3d
+	mapping       *mapping
+	targetsMapper targetsMapper
+	naming        *paxos.Naming // TO TEST PAXOS with naming
 }
 
 // CtrlMessage internal representation of messages for the controller of the UI
@@ -62,14 +65,17 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(identifier, uiAddress, gossipAddress string,
-	g gossip.BaseGossiper, addresses []string, position utils.Vec3d) *Drone {
+	g *gossip.Gossiper, addresses []string, position utils.Vec3d, targetsMapper targetsMapper, mapping *mapping, naming *paxos.Naming) *Drone {
 
 	c := &Drone{
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
 		gossiper:      g,
+		mapping:       mapping,
 		position:      position,
+		targetsMapper: targetsMapper,
+		naming:        naming, // TO TEST PAXOS with naming
 	}
 	g.AddAddresses(addresses...)
 
@@ -149,7 +155,6 @@ func (c *Drone) PostMessage(w http.ResponseWriter, r *http.Request) {
 
 	if message.Destination != "" {
 		// client message for a private message
-		fmt.Println("SEND PRIVATE")
 		c.gossiper.AddPrivateMessage(message.Contents, message.Destination, c.gossiper.GetIdentifier(), 10)
 		c.messages = append(c.messages, CtrlMessage{c.identifier, 0, message.Contents})
 	} else {
@@ -263,25 +268,38 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 
 // HandleGossipMessage handle specific messages concerning the drone
 func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
+	//fmt.Println("DRONE message Handler")
 	c.Lock()
 	defer c.Unlock()
 	if msg.Rumor != nil {
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil {
 				//Begin mapping phase
+				target := c.targetsMapper.mapTargets(msg.Rumor.Extra.SwarmInit.InitialPos, msg.Rumor.Extra.SwarmInit.TargetPos)
+				c.mapping.Propose(c.gossiper, target)
 			} else {
+				//fmt.Println("New Paxos Message")
+				/*if msg.Rumor.Extra.PaxosTLC != nil {
+					fmt.Println("New PAXOS TLC", c.gossiper.GetIdentifier())
+				}*/
+				c.naming.HandleExtraMessage(c.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
+
 				//Handle Paxos
+				//c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
 			}
 		}
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
 			msg.Rumor.ID, msg.Rumor.Text})
-	}
-
-	if msg.Private != nil {
+	} else if msg.Private != nil {
 		c.messages = append(c.messages, CtrlMessage{msg.Private.Origin, 0, msg.Private.Text})
 	}
 
-	log.Info().Msgf("messages %v", c.messages)
+	//log.Info().Msgf("messages %v", c.messages)
+}
+
+// TO TEST PAXOS with naming
+func (c *Drone) ProposeName(metahash string, filename string) (string, error) {
+	return c.naming.Propose(c.gossiper, metahash, filename)
 }
 
 func readString(w http.ResponseWriter, r *http.Request) (string, bool) {
