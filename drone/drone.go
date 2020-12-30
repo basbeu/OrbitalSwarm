@@ -15,8 +15,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/paxos"
-
-	"go.dedis.ch/cs438/orbitalswarm/utils"
+	"gonum.org/v1/gonum/spatial/r3"
 
 	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
@@ -49,7 +48,7 @@ type Drone struct {
 	gossiper      *gossip.Gossiper
 	cliConn       net.Conn
 	messages      []CtrlMessage
-	position      utils.Vec3d
+	position      r3.Vec
 	mapping       *mapping.Mapping
 	targetsMapper mapping.TargetsMapper
 	naming        *paxos.Naming // TO TEST PAXOS with naming
@@ -66,7 +65,7 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position utils.Vec3d, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming) *Drone {
+	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming) *Drone {
 
 	c := &Drone{
 		identifier:    identifier,

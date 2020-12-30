@@ -6,6 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test(t *testing.T) {
+func TestInitMatrix(t *testing.T) {
 	require.True(t, true)
 }

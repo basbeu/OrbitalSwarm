@@ -14,7 +14,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
-	"go.dedis.ch/cs438/orbitalswarm/utils"
+	"gonum.org/v1/gonum/spatial/r3"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog"
@@ -38,7 +38,7 @@ type GroundStation struct {
 	cliConn       net.Conn
 	hub           *Hub
 
-	drones []utils.Vec3d
+	drones []r3.Vec
 
 	handler chan []byte
 }
@@ -46,7 +46,7 @@ type GroundStation struct {
 // NewGroundStation returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.BaseGossiper, drones []utils.Vec3d) *GroundStation {
+func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.BaseGossiper, drones []r3.Vec) *GroundStation {
 	handler := make(chan []byte)
 	gs := &GroundStation{
 		identifier:    identifier,

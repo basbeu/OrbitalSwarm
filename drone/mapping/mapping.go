@@ -4,7 +4,7 @@ import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
-	"go.dedis.ch/cs438/orbitalswarm/utils"
+	"gonum.org/v1/gonum/spatial/r3"
 )
 
 type Mapping struct {
@@ -14,7 +14,7 @@ func NewMapping() *Mapping {
 	return &Mapping{}
 }
 
-func (m *Mapping) Propose(g *gossip.Gossiper, targets map[string]utils.Vec3d) (string, error) {
+func (m *Mapping) Propose(g *gossip.Gossiper, targets map[string]r3.Vec) (string, error) {
 	//TODO
 	return "", nil
 }
