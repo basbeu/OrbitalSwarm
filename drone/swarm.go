@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/utils"
 )
@@ -54,7 +55,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], newHungarianGraphConsensus(), newMapping(), nil)
+		swarm.drones[i] = NewDrone(name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], mapping.NewHungarianMapper(), mapping.NewMapping(), nil)
 	}
 
 	return &swarm, positions

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 
 	"github.com/stretchr/testify/require"
@@ -1638,7 +1639,7 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 	require.Equal(t, fullName, node.GetIdentifier())
 
 	naming := paxos.NewNaming(template.numParticipants, template.nodeIndex, template.paxosRetry)
-	drone := NewDrone(node.GetIdentifier(), addr, addr, node, node.GetNodes(), utils.Vec3d{}, newHungarianGraphConsensus(), newMapping(), naming)
+	drone := NewDrone(node.GetIdentifier(), addr, addr, node, node.GetNodes(), utils.Vec3d{}, mapping.NewHungarianMapper(), mapping.NewMapping(), naming)
 
 	return nodeInfo{
 		id:       node.GetIdentifier(),
