@@ -51,3 +51,21 @@ func TestInitMatrix(t *testing.T) {
 
 	require.True(t, mat.Equal(expectedMatrix, matrix))
 }
+
+func TestStep01(t *testing.T) {
+	mapper := NewHungarianMapper()
+	costMatrix := mat.NewDense(3, 3, []float64{
+		1, 23, 45,
+		34, 17, 12,
+		104, 56, 64,
+	})
+
+	expectedMatrix := mat.NewDense(3, 3, []float64{
+		0, 22, 44,
+		22, 5, 0,
+		48, 0, 8,
+	})
+
+	mapper.step01(costMatrix)
+	require.True(t, mat.Equal(expectedMatrix, costMatrix))
+}
