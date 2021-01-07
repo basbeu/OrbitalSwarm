@@ -9,6 +9,12 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
+const (
+	staredVal = 1
+	primedVal = 2
+	coverVal  = 1
+)
+
 // https://en.wikipedia.org/wiki/Hungarian_algorithm
 // https://www.researchgate.net/publication/290437481_Tutorial_on_Implementation_of_Munkres'_Assignment_Algorithm
 
@@ -57,5 +63,22 @@ func (m *hungarianMapper) step01(matrix *mat.Dense) {
 	}
 }
 
-func (m *hungarianMapper) step02(matrix *mat.Dense) {
+// step02 : Find a zero (Z) in the resulting matrix. If there is no starred zero in its row or column, star Z. Repeat for each element in the matrix. Go to Step 3. Return mask matrix
+func (m *hungarianMapper) step02(matrix *mat.Dense) *mat.Dense {
+	r, c := matrix.Dims()
+	mask := mat.NewDense(r, c, nil)
+	rowCover := mat.NewVecDense(r, nil)
+	colCover := mat.NewVecDense(c, nil)
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if matrix.At(i, j) == 0 &&
+				rowCover.AtVec(i) != coverVal &&
+				colCover.AtVec(j) != coverVal {
+				mask.Set(i, j, staredVal)
+				rowCover.SetVec(i, coverVal)
+				colCover.SetVec(j, coverVal)
+			}
+		}
+	}
+	return mask
 }

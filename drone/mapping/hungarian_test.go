@@ -69,3 +69,54 @@ func TestStep01(t *testing.T) {
 	mapper.step01(costMatrix)
 	require.True(t, mat.Equal(expectedMatrix, costMatrix))
 }
+
+func TestStep02(t *testing.T) {
+	//TestCase 1
+	mapper := NewHungarianMapper()
+	step1Matrix := mat.NewDense(3, 3, []float64{
+		0, 22, 44,
+		22, 5, 0,
+		48, 0, 8,
+	})
+
+	expectedMatrix := mat.NewDense(3, 3, []float64{
+		1, 0, 0,
+		0, 0, 1,
+		0, 1, 0,
+	})
+
+	mask := mapper.step02(step1Matrix)
+	require.True(t, mat.Equal(expectedMatrix, mask))
+
+	// TestCase 2
+	step1Matrix = mat.NewDense(3, 3, []float64{
+		0, 22, 0,
+		22, 5, 0,
+		48, 18, 0,
+	})
+
+	expectedMatrix = mat.NewDense(3, 3, []float64{
+		1, 0, 0,
+		0, 0, 1,
+		0, 0, 0,
+	})
+
+	mask = mapper.step02(step1Matrix)
+	require.True(t, mat.Equal(expectedMatrix, mask))
+
+	// TestCase 3
+	step1Matrix = mat.NewDense(3, 3, []float64{
+		0, 0, 0,
+		0, 0, 0,
+		0, 0, 0,
+	})
+
+	expectedMatrix = mat.NewDense(3, 3, []float64{
+		1, 0, 0,
+		0, 1, 0,
+		0, 0, 1,
+	})
+
+	mask = mapper.step02(step1Matrix)
+	require.True(t, mat.Equal(expectedMatrix, mask))
+}
