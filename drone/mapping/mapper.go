@@ -82,3 +82,21 @@ func (m *hungarianMapper) step02(matrix *mat.Dense) *mat.Dense {
 	}
 	return mask
 }
+
+// step03 : Cover each column containing a starred zero. If K columns are covered, the starred zeros describe a complete set of unique assignments. In this case, Go to DONE, otherwise, Go to Step 4.
+func (m *hungarianMapper) step03(mask *mat.Dense) bool {
+	r, c := mask.Dims()
+	colCover := mat.NewVecDense(c, nil)
+	colCount := 0
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if mask.At(i, j) == staredVal &&
+				colCover.AtVec(j) != coverVal {
+				colCover.SetVec(j, coverVal)
+				colCount++
+			}
+		}
+	}
+
+	return colCount >= c
+}
