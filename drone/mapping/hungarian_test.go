@@ -52,6 +52,124 @@ func TestInitMatrix(t *testing.T) {
 	require.True(t, mat.Equal(expectedMatrix, matrix))
 }
 
+func TestComputeAssignment(t *testing.T) {
+	mapper := NewHungarianMapper()
+
+	// example https://www.researchgate.net/publication/290437481_Tutorial_on_Implementation_of_Munkres'_Assignment_Algorithm
+	matrix := mat.NewDense(3, 3, []float64{
+		1, 2, 3,
+		2, 4, 6,
+		3, 6, 9,
+	})
+	expectedMask := mat.NewDense(3, 3, []float64{
+		0, 0, 1,
+		0, 1, 0,
+		1, 0, 0,
+	})
+
+	mask := mapper.computeAssignment(matrix)
+	require.True(t, mat.Equal(expectedMask, mask))
+
+	// Example : https://brilliant.org/wiki/hungarian-matching/
+	matrix = mat.NewDense(3, 3, []float64{
+		108, 125, 150,
+		150, 135, 175,
+		122, 148, 250,
+	})
+	expectedMask = mat.NewDense(3, 3, []float64{
+		0, 0, 1,
+		0, 1, 0,
+		1, 0, 0,
+	})
+
+	mask = mapper.computeAssignment(matrix)
+	require.True(t, mat.Equal(expectedMask, mask))
+
+	// Example 1 : https://www.youtube.com/watch?v=cQ5MsiGaDY8
+	matrix = mat.NewDense(3, 3, []float64{
+		40, 60, 15,
+		25, 30, 45,
+		55, 30, 25,
+	})
+	expectedMask = mat.NewDense(3, 3, []float64{
+		0, 0, 1,
+		1, 0, 0,
+		0, 1, 0,
+	})
+
+	mask = mapper.computeAssignment(matrix)
+	require.True(t, mat.Equal(expectedMask, mask))
+
+	// Example 2 : https://www.youtube.com/watch?v=cQ5MsiGaDY8
+	matrix = mat.NewDense(3, 3, []float64{
+		30, 25, 10,
+		15, 10, 20,
+		25, 20, 15,
+	})
+	expectedMask = mat.NewDense(3, 3, []float64{
+		0, 0, 1,
+		0, 1, 0,
+		1, 0, 0,
+	})
+
+	mask = mapper.computeAssignment(matrix)
+	require.True(t, mat.Equal(expectedMask, mask))
+}
+
+func TestDecodeAssignement(t *testing.T) {
+	mapper := NewHungarianMapper()
+
+	initialPos := []r3.Vec{
+		r3.Vec{X: 1, Y: 0, Z: 0},
+		r3.Vec{X: 0, Y: 2, Z: 0},
+		r3.Vec{X: 0, Y: 0, Z: 3},
+	}
+	targetPos := []r3.Vec{
+		r3.Vec{X: 1, Y: 1, Z: 1},
+		r3.Vec{X: 2, Y: 2, Z: 2},
+		r3.Vec{X: 3, Y: 3, Z: 3},
+	}
+
+	expectedMatrix := mat.NewDense(3, 3, []float64{
+		1, 3, 4,
+		1, 2, 4,
+		2, 3, 4,
+	})
+
+	matrix := mapper.initMatrix(initialPos, targetPos)
+
+	require.True(t, mat.Equal(expectedMatrix, matrix))
+
+	//TestCase 1
+	mask := mat.NewDense(3, 3, []float64{
+		1, 0, 0,
+		0, 1, 0,
+		0, 0, 1,
+	})
+	expectedRes := map[string]r3.Vec{
+		"0": r3.Vec{X: 1, Y: 1, Z: 1},
+		"1": r3.Vec{X: 2, Y: 2, Z: 2},
+		"2": r3.Vec{X: 3, Y: 3, Z: 3},
+	}
+
+	res := mapper.decodeAssignement(targetPos, mask)
+	require.Equal(t, expectedRes, res)
+	//TestCase 2
+	mask = mat.NewDense(3, 3, []float64{
+		0, 1, 0,
+		1, 0, 0,
+		0, 0, 1,
+	})
+	expectedRes = map[string]r3.Vec{
+		"0": r3.Vec{X: 2, Y: 2, Z: 2},
+		"1": r3.Vec{X: 1, Y: 1, Z: 1},
+		"2": r3.Vec{X: 3, Y: 3, Z: 3},
+	}
+
+	res = mapper.decodeAssignement(targetPos, mask)
+	require.Equal(t, expectedRes, res)
+}
+
 func TestStep01(t *testing.T) {
 	mapper := NewHungarianMapper()
 	costMatrix := mat.NewDense(3, 3, []float64{
@@ -129,8 +247,9 @@ func TestStep03(t *testing.T) {
 		0, 0, 1,
 		0, 1, 0,
 	})
-
-	require.True(t, mapper.step03(maskMatrix))
+	colCover := mat.NewVecDense(3, []float64{0, 0, 0})
+	require.True(t, mapper.step03(maskMatrix, colCover))
+	require.True(t, mat.Equal(mat.NewVecDense(3, []float64{1, 1, 1}), colCover))
 
 	//TestCase 2
 	maskMatrix = mat.NewDense(3, 3, []float64{
@@ -138,8 +257,10 @@ func TestStep03(t *testing.T) {
 		0, 0, 1,
 		0, 0, 0,
 	})
+	colCover = mat.NewVecDense(3, []float64{0, 0, 0})
 
-	require.True(t, !mapper.step03(maskMatrix))
+	require.True(t, !mapper.step03(maskMatrix, colCover))
+	require.True(t, mat.Equal(mat.NewVecDense(3, []float64{1, 0, 1}), colCover))
 }
 
 func TestFindUncoveredZero(t *testing.T) {

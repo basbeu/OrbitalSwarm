@@ -1,6 +1,7 @@
 package mapping
 
 import (
+	"fmt"
 	"math"
 
 	"gonum.org/v1/gonum/floats"
@@ -34,8 +35,10 @@ func (m *hungarianMapper) MapTargets(initials []r3.Vec, targets []r3.Vec) map[st
 		panic("Number of drones not equal to number of targets")
 	}
 
-	//TODO
-	return make(map[string]r3.Vec)
+	matrix := m.initMatrix(initials, targets)
+	mask := m.computeAssignment(matrix)
+
+	return m.decodeAssignement(targets, mask)
 }
 
 // iniMatrix creates the nxn cost matrix
@@ -51,6 +54,61 @@ func (m *hungarianMapper) initMatrix(initials []r3.Vec, targets []r3.Vec) *mat.D
 	}
 
 	return matrix
+}
+
+func (m *hungarianMapper) computeAssignment(matrix *mat.Dense) *mat.Dense {
+	var mask *mat.Dense
+	var rowCover *mat.VecDense
+	var colCover *mat.VecDense
+	var rPrimed, cPrimed int
+
+	r, c := matrix.Dims()
+	rowCover = mat.NewVecDense(r, nil)
+	colCover = mat.NewVecDense(c, nil)
+
+	done := false
+	step := 1
+	for !done {
+		switch step {
+		case 1:
+			m.step01(matrix)
+			step = 2
+		case 2:
+			mask = m.step02(matrix)
+			step = 3
+		case 3:
+			done = m.step03(mask, colCover)
+			step = 4
+		case 4:
+			var found bool
+			rPrimed, cPrimed, found = m.step04(matrix, mask, rowCover, colCover)
+			if found {
+				step = 5
+			} else {
+				step = 6
+			}
+		case 5:
+			m.step05(mask, rowCover, colCover, rPrimed, cPrimed)
+			step = 3
+		case 6:
+			m.step06(matrix, rowCover, colCover)
+			step = 4
+		}
+	}
+	return mask
+}
+
+func (m *hungarianMapper) decodeAssignement(targets []r3.Vec, mask *mat.Dense) map[string]r3.Vec {
+	r, c := mask.Dims()
+	res := make(map[string]r3.Vec)
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if mask.At(i, j) == staredVal {
+				res[fmt.Sprintf("%d", i)] = targets[j]
+			}
+		}
+	}
+	return res
 }
 
 // step01 : For each row of the matrix, find the smallest element and subtract it from every element in its row. Go to Step 2
@@ -84,9 +142,8 @@ func (m *hungarianMapper) step02(matrix *mat.Dense) *mat.Dense {
 }
 
 // step03 : Cover each column containing a starred zero. If K columns are covered, the starred zeros describe a complete set of unique assignments. In this case, Go to DONE, otherwise, Go to Step 4.
-func (m *hungarianMapper) step03(mask *mat.Dense) bool {
+func (m *hungarianMapper) step03(mask *mat.Dense, colCover *mat.VecDense) bool {
 	r, c := mask.Dims()
-	colCover := mat.NewVecDense(c, nil)
 	colCount := 0
 	for i := 0; i < r; i++ {
 		for j := 0; j < c; j++ {
