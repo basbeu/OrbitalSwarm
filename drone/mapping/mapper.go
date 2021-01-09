@@ -100,3 +100,48 @@ func (m *hungarianMapper) step03(mask *mat.Dense) bool {
 
 	return colCount >= c
 }
+
+func (m *hungarianMapper) step04(matrix, mask *mat.Dense, rowCover, colCover *mat.VecDense) (int, int, bool) {
+	done := false
+	for !done {
+		r, c, found := m.findUncoveredZero(matrix, rowCover, colCover)
+		if !found {
+			done = true
+		} else {
+			mask.Set(r, c, primedVal)
+			cStar, found := m.findStarredInRow(mask, r)
+			if found {
+				rowCover.SetVec(r, coverVal)
+				colCover.SetVec(cStar, 0)
+			} else {
+				return r, c, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+func (m *hungarianMapper) findUncoveredZero(matrix *mat.Dense, rowCover, colCover *mat.VecDense) (int, int, bool) {
+	r, c := matrix.Dims()
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if matrix.At(i, j) == 0 &&
+				rowCover.AtVec(i) != coverVal &&
+				colCover.AtVec(j) != coverVal {
+				return i, j, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+func (m *hungarianMapper) findStarredInRow(mask *mat.Dense, row int) (int, bool) {
+	_, c := mask.Dims()
+	for j := 0; j < c; j++ {
+		if mask.At(row, j) == staredVal {
+			return j, true
+		}
+	}
+
+	return 0, false
+}

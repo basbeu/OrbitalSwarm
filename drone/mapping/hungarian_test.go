@@ -141,3 +141,113 @@ func TestStep03(t *testing.T) {
 
 	require.True(t, !mapper.step03(maskMatrix))
 }
+
+func TestFindUncoveredZero(t *testing.T) {
+	mapper := NewHungarianMapper()
+
+	//TestCase 1
+	matrix := mat.NewDense(3, 3, []float64{
+		0, 22, 44,
+		22, 5, 0,
+		48, 0, 8,
+	})
+	rowCover := mat.NewVecDense(3, []float64{1, 0, 0})
+	colCover := mat.NewVecDense(3, []float64{0, 1, 0})
+
+	r, c, found := mapper.findUncoveredZero(matrix, rowCover, colCover)
+
+	require.True(t, found)
+	require.Equal(t, 1, r)
+	require.Equal(t, 2, c)
+
+	//TestCase 2
+	rowCover = mat.NewVecDense(3, []float64{1, 1, 0})
+	colCover = mat.NewVecDense(3, []float64{0, 1, 0})
+
+	r, c, found = mapper.findUncoveredZero(matrix, rowCover, colCover)
+
+	require.True(t, !found)
+}
+
+func TestFindStarredInRow(t *testing.T) {
+	mapper := NewHungarianMapper()
+
+	mask := mat.NewDense(3, 3, []float64{
+		0, 0, 0,
+		0, 1, 0,
+		1, 0, 1,
+	})
+
+	//TestCase 1
+	c, found := mapper.findStarredInRow(mask, 0)
+	require.True(t, !found)
+
+	//TestCase 2
+	c, found = mapper.findStarredInRow(mask, 1)
+	require.True(t, found)
+	require.Equal(t, c, 1)
+
+	//TestCase 3
+	c, found = mapper.findStarredInRow(mask, 2)
+	require.True(t, found)
+	require.Equal(t, c, 0)
+}
+
+func TestStep04(t *testing.T) {
+	//TestCase 1
+	mapper := NewHungarianMapper()
+	matrix := mat.NewDense(3, 3, []float64{
+		0, 22, 44,
+		22, 5, 0,
+		48, 0, 8,
+	})
+	maskMatrix := mat.NewDense(3, 3, []float64{
+		0, 0, 0,
+		0, 0, 0,
+		0, 0, 0,
+	})
+
+	rowCover := mat.NewVecDense(3, []float64{0, 0, 0})
+	colCover := mat.NewVecDense(3, []float64{0, 0, 0})
+
+	rPrimed, cPrimed, found := mapper.step04(matrix, maskMatrix, rowCover, colCover)
+
+	require.True(t, found)
+	require.True(t, mat.Equal(rowCover, mat.NewVecDense(3, []float64{0, 0, 0})))
+	require.True(t, mat.Equal(colCover, mat.NewVecDense(3, []float64{0, 0, 0})))
+	require.True(t, mat.Equal(maskMatrix, mat.NewDense(3, 3, []float64{
+		2, 0, 0,
+		0, 0, 0,
+		0, 0, 0,
+	})))
+	require.Equal(t, 0, rPrimed)
+	require.Equal(t, 0, cPrimed)
+
+	//TestCase 2
+	matrix = mat.NewDense(3, 3, []float64{
+		0, 22, 0,
+		22, 5, 0,
+		48, 0, 8,
+	})
+	maskMatrix = mat.NewDense(3, 3, []float64{
+		0, 0, 1,
+		0, 0, 0,
+		0, 0, 0,
+	})
+
+	rowCover = mat.NewVecDense(3, []float64{0, 0, 0})
+	colCover = mat.NewVecDense(3, []float64{0, 0, 1})
+
+	rPrimed, cPrimed, found = mapper.step04(matrix, maskMatrix, rowCover, colCover)
+
+	require.True(t, found)
+	require.True(t, mat.Equal(rowCover, mat.NewVecDense(3, []float64{1, 0, 0})))
+	require.True(t, mat.Equal(colCover, mat.NewVecDense(3, []float64{0, 0, 0})))
+	require.True(t, mat.Equal(maskMatrix, mat.NewDense(3, 3, []float64{
+		2, 0, 1,
+		0, 0, 2,
+		0, 0, 0,
+	})))
+	require.Equal(t, 1, rPrimed)
+	require.Equal(t, 2, cPrimed)
+}
