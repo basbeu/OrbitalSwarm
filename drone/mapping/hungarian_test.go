@@ -323,3 +323,42 @@ func TestStep05(t *testing.T) {
 		0, 0, 0,
 	})))
 }
+
+func TestFindSmallestUncovered(t *testing.T) {
+	mapper := NewHungarianMapper()
+	matrix := mat.NewDense(3, 3, []float64{
+		24, 22, 44,
+		22, 5, 35,
+		48, 14, 8,
+	})
+	rowCover := mat.NewVecDense(3, []float64{0, 1, 0})
+	colCover := mat.NewVecDense(3, []float64{0, 0, 1})
+
+	val := mapper.findSmallestUncovered(matrix, rowCover, colCover)
+
+	require.Equal(t, 14.0, val)
+	require.True(t, mat.Equal(rowCover, mat.NewVecDense(3, []float64{0, 1, 0})))
+	require.True(t, mat.Equal(colCover, mat.NewVecDense(3, []float64{0, 0, 1})))
+}
+
+func TestStep06(t *testing.T) {
+	//TestCase 1
+	mapper := NewHungarianMapper()
+	matrix := mat.NewDense(3, 3, []float64{
+		24, 22, 44,
+		22, 5, 35,
+		48, 14, 8,
+	})
+
+	rowCover := mat.NewVecDense(3, []float64{0, 1, 0})
+	colCover := mat.NewVecDense(3, []float64{0, 0, 1})
+
+	mapper.step06(matrix, rowCover, colCover)
+	require.True(t, mat.Equal(rowCover, mat.NewVecDense(3, []float64{0, 1, 0})))
+	require.True(t, mat.Equal(colCover, mat.NewVecDense(3, []float64{0, 0, 1})))
+	require.True(t, mat.Equal(matrix, mat.NewDense(3, 3, []float64{
+		10, 8, 44,
+		22, 5, 49,
+		34, 0, 8,
+	})))
+}

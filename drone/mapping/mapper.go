@@ -219,3 +219,32 @@ func (m *hungarianMapper) findPrimedInRow(mask *mat.Dense, row int) (int, bool) 
 
 	return 0, false
 }
+
+// step06 :    Add the value found in Step 4 to every element of each covered row, and subtract it from every element of each uncovered column. Return to Step 4 without altering any stars, primes, or covered lines.
+func (m *hungarianMapper) step06(matrix *mat.Dense, rowCover, colCover *mat.VecDense) {
+	smallest := m.findSmallestUncovered(matrix, rowCover, colCover)
+	r, c := matrix.Dims()
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if rowCover.AtVec(i) == coverVal {
+				matrix.Set(i, j, matrix.At(i, j)+smallest)
+			}
+			if colCover.AtVec(j) != coverVal {
+				matrix.Set(i, j, matrix.At(i, j)-smallest)
+			}
+		}
+	}
+}
+
+func (m *hungarianMapper) findSmallestUncovered(matrix *mat.Dense, rowCover, colCover *mat.VecDense) float64 {
+	r, c := matrix.Dims()
+	min := math.MaxFloat64
+	for i := 0; i < r; i++ {
+		for j := 0; j < c; j++ {
+			if rowCover.AtVec(i) == 0 && colCover.AtVec(j) == 0 {
+				min = math.Min(matrix.At(i, j), min)
+			}
+		}
+	}
+	return min
+}
