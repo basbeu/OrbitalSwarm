@@ -278,7 +278,7 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 			if msg.Rumor.Extra.SwarmInit != nil {
 				//Begin mapping phase
 				target := c.targetsMapper.MapTargets(msg.Rumor.Extra.SwarmInit.DronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-				c.mapping.Propose(c.gossiper, target)
+				c.mapping.Propose(c.gossiper, msg.Rumor.Extra.SwarmInit.PatternID, target)
 			} else {
 				//fmt.Println("New Paxos Message")
 				/*if msg.Rumor.Extra.PaxosTLC != nil {

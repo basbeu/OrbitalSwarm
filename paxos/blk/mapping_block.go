@@ -1,5 +1,7 @@
 package blk
 
+import "gonum.org/v1/gonum/spatial/r3"
+
 type MappingBlock struct {
 	//TODO
 	BlockNum int // not included in the hash
@@ -9,7 +11,8 @@ type MappingBlock struct {
 }
 
 type MappingBlockContent struct {
-	//TODO
+	PatternID string
+	Targets   []r3.Vec
 }
 
 func (c *MappingBlockContent) Hash() []byte {

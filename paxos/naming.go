@@ -68,7 +68,7 @@ func (n *Naming) Propose(g *gossip.Gossiper, metahash string, filename string) (
 	if !n.proposed {
 		log.Printf("Propose value")
 		n.proposed = true
-		n.blockChain.propose(g, &blk.NamingBlockContent{
+		n.blockChain.Propose(g, &blk.NamingBlockContent{
 			Metahash: hash,
 			Filename: filename,
 		})
@@ -96,7 +96,7 @@ func (n *Naming) getFiles() bool {
 }
 
 func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
-	blockContainer := n.blockChain.handleExtraMessage(g, msg)
+	blockContainer := n.blockChain.HandleExtraMessage(g, msg)
 	if blockContainer == nil {
 		return
 	}
@@ -123,7 +123,7 @@ func (n *Naming) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraM
 				if err != nil {
 					log.Printf("Unable to decode metahash string")
 				}
-				n.blockChain.propose(g, &blk.NamingBlockContent{
+				n.blockChain.Propose(g, &blk.NamingBlockContent{
 					Metahash: data,
 					Filename: p.filename,
 				})

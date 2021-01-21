@@ -36,8 +36,7 @@ func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int, blockFacto
 	}
 }
 
-//func (b *BlockChain) propose(g *gossip.Gossiper, metahash []byte, filename string) {
-func (b *BlockChain) propose(g *gossip.Gossiper, blockContent blk.BlockContent) {
+func (b *BlockChain) Propose(g *gossip.Gossiper, blockContent blk.BlockContent) {
 	if b.tail == nil {
 		// First block
 
@@ -57,7 +56,7 @@ func (b *BlockChain) GetBlocks() (string, map[string]*blk.BlockContainer) {
 	return hex.EncodeToString(b.tail.Hash()), b.blocks
 }
 
-func (b *BlockChain) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
+func (b *BlockChain) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	block := b.tlc.handleExtraMessage(g, msg)
 	if block != nil {
 		b.blocks[hex.EncodeToString(block.Hash())] = block
