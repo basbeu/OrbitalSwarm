@@ -1,7 +1,6 @@
 package mapping
 
 import (
-	"fmt"
 	"math"
 
 	"gonum.org/v1/gonum/floats"
@@ -20,7 +19,7 @@ const (
 // https://www.researchgate.net/publication/290437481_Tutorial_on_Implementation_of_Munkres'_Assignment_Algorithm
 
 type TargetsMapper interface {
-	MapTargets(initials []r3.Vec, targets []r3.Vec) map[string]r3.Vec
+	MapTargets(initials []r3.Vec, targets []r3.Vec) []r3.Vec
 }
 
 type hungarianMapper struct {
@@ -30,7 +29,7 @@ func NewHungarianMapper() *hungarianMapper {
 	return &hungarianMapper{}
 }
 
-func (m *hungarianMapper) MapTargets(initials []r3.Vec, targets []r3.Vec) map[string]r3.Vec {
+func (m *hungarianMapper) MapTargets(initials []r3.Vec, targets []r3.Vec) []r3.Vec {
 	if len(initials) != len(targets) {
 		panic("Number of drones not equal to number of targets")
 	}
@@ -98,13 +97,13 @@ func (m *hungarianMapper) computeAssignment(matrix *mat.Dense) *mat.Dense {
 	return mask
 }
 
-func (m *hungarianMapper) decodeAssignement(targets []r3.Vec, mask *mat.Dense) map[string]r3.Vec {
+func (m *hungarianMapper) decodeAssignement(targets []r3.Vec, mask *mat.Dense) []r3.Vec {
 	r, c := mask.Dims()
-	res := make(map[string]r3.Vec)
+	res := make([]r3.Vec, r)
 	for i := 0; i < r; i++ {
 		for j := 0; j < c; j++ {
 			if mask.At(i, j) == staredVal {
-				res[fmt.Sprintf("%d", i)] = targets[j]
+				res[i] = targets[j]
 			}
 		}
 	}

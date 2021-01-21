@@ -42,6 +42,7 @@ type ClientMessage struct {
 // the ui, dispatching responses and messages etc
 type Drone struct {
 	sync.Mutex
+	droneID       uint32
 	uiAddress     string
 	identifier    string
 	gossipAddress string
@@ -64,10 +65,11 @@ type CtrlMessage struct {
 // NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewDrone(identifier, uiAddress, gossipAddress string,
+func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
 	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming) *Drone {
 
 	c := &Drone{
+		droneID:       droneID,
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
@@ -282,10 +284,10 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 				/*if msg.Rumor.Extra.PaxosTLC != nil {
 					fmt.Println("New PAXOS TLC", c.gossiper.GetIdentifier())
 				}*/
-				c.naming.HandleExtraMessage(c.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
+				//c.naming.HandleExtraMessage(c.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
 
 				//Handle Paxos
-				//c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
+				c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
 			}
 		}
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
