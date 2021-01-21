@@ -19,6 +19,7 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 	var paxosPropose *PaxosPropose
 	var paxosAccept *PaxosAccept
 	var paxosTLC *PaxosTLC
+	var swarmInit *SwarmInit
 
 	if e.PaxosPrepare != nil {
 		paxosPrepare = new(PaxosPrepare)
@@ -53,11 +54,19 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 		paxosTLC.Value = e.PaxosTLC.Value.Copy()
 	}
 
+	if e.SwarmInit != nil {
+		swarmInit = new(SwarmInit)
+		swarmInit.PatternID = e.SwarmInit.PatternID
+		swarmInit.DronePos = append(swarmInit.DronePos, e.SwarmInit.DronePos...)
+		swarmInit.TargetPos = append(swarmInit.TargetPos, e.SwarmInit.TargetPos...)
+	}
+
 	return &ExtraMessage{
 		PaxosPrepare: paxosPrepare,
 		PaxosPromise: paxosPromise,
 		PaxosPropose: paxosPropose,
 		PaxosAccept:  paxosAccept,
 		PaxosTLC:     paxosTLC,
+		SwarmInit:    swarmInit,
 	}
 }
