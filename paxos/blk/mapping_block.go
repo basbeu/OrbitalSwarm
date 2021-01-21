@@ -1,9 +1,13 @@
 package blk
 
-import "gonum.org/v1/gonum/spatial/r3"
+import (
+	"crypto/sha256"
+	"fmt"
+
+	"gonum.org/v1/gonum/spatial/r3"
+)
 
 type MappingBlock struct {
-	//TODO
 	BlockNum int // not included in the hash
 	PrevHash []byte
 
@@ -16,23 +20,45 @@ type MappingBlockContent struct {
 }
 
 func (c *MappingBlockContent) Hash() []byte {
-	//TODO
-	return []byte{}
+	h := sha256.New()
+	h.Write([]byte(c.PatternID))
+
+	for _, t := range c.Targets {
+		h.Write([]byte(fmt.Sprintf("%v", t)))
+	}
+
+	return h.Sum(nil)
 }
 
 func (c *MappingBlockContent) Copy() BlockContent {
-	//TODO
-	return &MappingBlockContent{}
+	return &MappingBlockContent{
+		PatternID: c.PatternID,
+		Targets:   append([]r3.Vec{}, c.Targets...),
+	}
 }
 
 func (b *MappingBlock) Hash() []byte {
-	//TODO
-	return []byte{}
+	h := sha256.New()
+
+	h.Write(b.PrevHash)
+	h.Write(b.Content.Hash())
+
+	return h.Sum(nil)
 }
 
 func (b *MappingBlock) Copy() Block {
-	//TODO
-	return &MappingBlock{}
+	if b.Content == nil {
+		return &MappingBlock{
+			BlockNum: b.BlockNum,
+			PrevHash: append([]byte{}, b.PrevHash...),
+		}
+	}
+	return &MappingBlock{
+		BlockNum: b.BlockNum,
+		PrevHash: append([]byte{}, b.PrevHash...),
+
+		Content: b.Content.Copy(),
+	}
 }
 
 func (b *MappingBlock) BlockNumber() int {
@@ -60,27 +86,39 @@ func (b *MappingBlock) SetContent(blockContent BlockContent) {
 }
 
 func (b *MappingBlock) IsContentNil() bool {
-	//mappingContent := b.Content.(*MappingBlockContent)
-	//TODO
-	return false
-	//return mappingContent.Metahash == nil
+	mappingContent := b.Content.(*MappingBlockContent)
+	return mappingContent.Targets == nil
 }
 
 type MappingBlockFactory struct{}
 
 func (f MappingBlockFactory) NewEmptyBlock() *BlockContainer {
-	//TODO
-	return &BlockContainer{}
+	return &BlockContainer{
+		Type:  blockMappingStr,
+		Block: nil,
+	}
 }
 
 func (f MappingBlockFactory) NewFirstBlock(blockContent BlockContent) *BlockContainer {
-	//TODO
-	return &BlockContainer{}
+	return &BlockContainer{
+		Type: blockMappingStr,
+		Block: &MappingBlock{
+			BlockNum: 0,
+			PrevHash: make([]byte, 32),
+			Content:  blockContent,
+		},
+	}
 }
 
 func (f MappingBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
-	//TODO
-	return &BlockContainer{}
+	return &BlockContainer{
+		Type: blockMappingStr,
+		Block: &MappingBlock{
+			BlockNum: blockNumber,
+			PrevHash: previousHash,
+			Content:  content,
+		},
+	}
 }
 
 func NewMappingBlockFactory() MappingBlockFactory {

@@ -98,13 +98,13 @@ func (f NamingBlockFactory) NewFirstBlock(blockContent BlockContent) *BlockConta
 	}
 }
 
-func (f NamingBlockFactory) NewBlock(blockNumber int, previousHash []byte, Content BlockContent) *BlockContainer {
+func (f NamingBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
 	return &BlockContainer{
 		Type: blockNamingStr,
 		Block: &NamingBlock{
 			BlockNum: blockNumber,
 			PrevHash: previousHash,
-			Content:  Content,
+			Content:  content,
 		},
 	}
 }

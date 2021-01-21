@@ -11,7 +11,8 @@ import (
 // package.
 
 const (
-	blockNamingStr = "NamingBlock"
+	blockNamingStr  = "NamingBlock"
+	blockMappingStr = "MappingBlock"
 )
 
 type BlockContainer struct {
