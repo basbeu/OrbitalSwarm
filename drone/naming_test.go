@@ -1639,7 +1639,7 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 	require.Equal(t, fullName, node.GetIdentifier())
 
 	naming := paxos.NewNaming(template.numParticipants, template.nodeIndex, template.paxosRetry)
-	drone := NewDrone(node.GetIdentifier(), addr, addr, node, node.GetNodes(), r3.Vec{}, mapping.NewHungarianMapper(), mapping.NewMapping(), naming)
+	drone := NewDrone(0, node.GetIdentifier(), addr, addr, node, node.GetNodes(), r3.Vec{}, mapping.NewHungarianMapper(), nil, naming)
 
 	return nodeInfo{
 		id:       node.GetIdentifier(),

@@ -47,7 +47,7 @@ func (msg *RumorMessage) Exec(g *Gossiper, addr *net.UDPAddr) error {
 
 			// Call the callback - Deliver rumor
 			if g.callback != nil && g.server.Address != addr && !isRouteRumor {
-				g.callback(msg.Origin, GossipPacket{Rumor: rumor}.Copy())
+				go g.callback(msg.Origin, GossipPacket{Rumor: rumor}.Copy())
 			}
 		}
 	}

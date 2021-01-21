@@ -32,6 +32,8 @@ func NewMapping(numDrones, nodeIndex, paxosRetry int) *Mapping {
 	return &Mapping{
 		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewMappingBlockFactory()),
 
+		patterns: make(map[string][]r3.Vec),
+
 		proposed: false,
 		pending:  make([]*proposition, 0),
 	}
@@ -60,7 +62,6 @@ func (m *Mapping) Propose(g *gossip.Gossiper, patternID string, targets []r3.Vec
 			Targets:   prop.targets,
 		})
 	}
-
 	m.mutex.Unlock()
 
 	return <-prop.done, nil

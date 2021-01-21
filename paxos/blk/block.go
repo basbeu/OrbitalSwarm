@@ -46,10 +46,12 @@ type BlockFactory interface {
 func (b *BlockContainer) UnmarshalJSON(data []byte) error {
 	//Setup blocktypes
 	blockTypes := map[string]reflect.Type{
-		blockNamingStr: reflect.TypeOf(NamingBlock{}),
+		blockNamingStr:  reflect.TypeOf(NamingBlock{}),
+		blockMappingStr: reflect.TypeOf(MappingBlock{}),
 	}
 	blockContentTypes := map[string]reflect.Type{
-		blockNamingStr: reflect.TypeOf(NamingBlockContent{}),
+		blockNamingStr:  reflect.TypeOf(NamingBlockContent{}),
+		blockMappingStr: reflect.TypeOf(MappingBlockContent{}),
 	}
 
 	//Unmarshall in generic map[string]interface{}

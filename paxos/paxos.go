@@ -1,6 +1,7 @@
 package paxos
 
 import (
+	"sync"
 	"time"
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
@@ -47,6 +48,8 @@ type Paxos struct {
 
 	// stop
 	chanEnd chan bool
+
+	mutex sync.Mutex
 }
 
 // NewPaxos create a new paxos
@@ -270,8 +273,10 @@ func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccep
 	} else {
 		count++
 	}
-	p.learnerData[msg.ID] = count
 
+	p.mutex.Lock()
+	p.learnerData[msg.ID] = count // RACE
+	p.mutex.Unlock()
 	// > or >= ??
 	if count >= p.numParticipant/2+1 {
 		p.acceptedCount = 0

@@ -50,6 +50,7 @@ type Drone struct {
 	cliConn       net.Conn
 	messages      []CtrlMessage
 	position      r3.Vec
+	target        r3.Vec
 	mapping       *mapping.Mapping
 	targetsMapper mapping.TargetsMapper
 	naming        *paxos.Naming // TO TEST PAXOS with naming
@@ -271,14 +272,18 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 // HandleGossipMessage handle specific messages concerning the drone
 func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 	//fmt.Println("DRONE message Handler")
-	c.Lock()
-	defer c.Unlock()
+	//fmt.Println(msg)
+	//c.Lock()
+	//defer c.Unlock()
 	if msg.Rumor != nil {
+		//fmt.Println(msg.Rumor)
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil {
+				log.Printf("%s Swarm init received", c.identifier)
 				//Begin mapping phase
 				target := c.targetsMapper.MapTargets(msg.Rumor.Extra.SwarmInit.DronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-				c.mapping.Propose(c.gossiper, msg.Rumor.Extra.SwarmInit.PatternID, target)
+				targets, _ := c.mapping.Propose(c.gossiper, msg.Rumor.Extra.SwarmInit.PatternID, target)
+				c.target = targets[c.droneID]
 			} else {
 				//fmt.Println("New Paxos Message")
 				/*if msg.Rumor.Extra.PaxosTLC != nil {
@@ -290,13 +295,23 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 				c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
 			}
 		}
-		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin,
-			msg.Rumor.ID, msg.Rumor.Text})
+		c.Lock()
+		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin, msg.Rumor.ID, msg.Rumor.Text})
+		c.Unlock()
 	} else if msg.Private != nil {
+		c.Lock()
 		c.messages = append(c.messages, CtrlMessage{msg.Private.Origin, 0, msg.Private.Text})
+		c.Unlock()
 	}
 
 	//log.Info().Msgf("messages %v", c.messages)
+}
+
+func (c *Drone) GetTarget() r3.Vec {
+	return c.target
+}
+func (c *Drone) GetDroneID() uint32 {
+	return c.droneID
 }
 
 // TO TEST PAXOS with naming

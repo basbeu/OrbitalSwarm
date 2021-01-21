@@ -87,3 +87,12 @@ func (s *Swarm) DronesAddresses() []string {
 	}
 	return addresses
 }
+
+// TO TEST, maybe not useful/good to keep it
+func (s *Swarm) DroneTargets() []r3.Vec {
+	targets := make([]r3.Vec, len(s.drones))
+	for _, d := range s.drones {
+		targets[d.GetDroneID()] = d.GetTarget()
+	}
+	return targets
+}
