@@ -4,6 +4,7 @@ import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+	"go.dedis.ch/onet/v3/log"
 )
 
 type TLC struct {
@@ -36,10 +37,11 @@ func (t *TLC) stop() {
 
 func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	if msg.PaxosTLC != nil {
+		log.Printf("%s Consensus call !", g.GetIdentifier())
 		if msg.PaxosTLC.Value.BlockNumber() == t.block.BlockNumber() {
 			t.tlcConfirmed++
 			if t.tlcConfirmed >= t.numParticipant/2+1 {
-				//log.Printf("%s Consensus of consensus !", g.GetIdentifier())
+				log.Printf("%s Consensus of consensus !", g.GetIdentifier())
 				return msg.PaxosTLC.Value
 			}
 		}
@@ -47,6 +49,7 @@ func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMess
 		block := t.paxos.handle(g, msg)
 
 		if block != nil {
+			log.Printf("%s Consensus whatt !", g.GetIdentifier())
 			blockTLC := t.block.Copy()
 			blockTLC.SetContent(block.GetContent())
 

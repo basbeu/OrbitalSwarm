@@ -1,7 +1,6 @@
 package paxos
 
 import (
-	"sync"
 	"time"
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
@@ -48,8 +47,6 @@ type Paxos struct {
 
 	// stop
 	chanEnd chan bool
-
-	mutex sync.Mutex
 }
 
 // NewPaxos create a new paxos
@@ -85,7 +82,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 
 func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 	go func() {
-		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
+		// log.Printf("%s Call Propose value %s", g.GetIdentifier())
 		if p.value == nil {
 			p.value = block
 		}
@@ -94,7 +91,7 @@ func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 			p.proposedID = id
 			p.state = stateAwaitPromise
 
-			// log.Printf("%s Propose value %s", g.identifier, p.value.Filename)
+			log.Printf("%s Propose value %d - %d", g.GetIdentifier(), id, p.paxosRetry)
 
 			// Phase 1
 			g.AddExtraMessage(&extramessage.ExtraMessage{
@@ -273,10 +270,8 @@ func (p *Paxos) uponPaxosAccept(g *gossip.Gossiper, msg *extramessage.PaxosAccep
 	} else {
 		count++
 	}
+	p.learnerData[msg.ID] = count
 
-	p.mutex.Lock()
-	p.learnerData[msg.ID] = count // RACE
-	p.mutex.Unlock()
 	// > or >= ??
 	if count >= p.numParticipant/2+1 {
 		p.acceptedCount = 0

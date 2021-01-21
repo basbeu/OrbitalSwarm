@@ -23,7 +23,7 @@ import (
 
 const defaultGossipAddr = "127.0.0.1:33000" // IP address:port number for gossiping
 const defaultName = "peerXYZ"               // Give a unique default name
-const defaultPaxosRetry = 3
+const defaultPaxosRetry = 1
 const defaultUIPort = "12000" // Default port number
 
 var (
