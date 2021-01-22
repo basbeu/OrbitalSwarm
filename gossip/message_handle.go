@@ -182,7 +182,9 @@ func (h *MessageHandler) handlePacket(g *Gossiper, packet HandlingPacket) {
 	// 			log.Printf("%s PAXOS_PROMISE origin %s from %s ID %d contents %d", g.identifier, msg.Origin, packet.addr.String(), msg.Extra.PaxosPromise.IDa, msg.Extra.PaxosPromise.PaxosSeqID)
 	// 		} else if msg.Extra.PaxosPropose != nil {
 	// 			log.Printf("%s PAXOS_PROPOSE origin %s from %s ID %d contents %d", g.identifier, msg.Origin, packet.addr.String(), msg.Extra.PaxosPropose.ID, msg.Extra.PaxosPropose.PaxosSeqID)
-	// 		}
+	// 		}else if msg.Extra.SwarmInit != nil {
+	// 	log.Printf("%s SWARM INIT origin %s from %s PatternID %s Positions %v Targets %v", g.identifier, msg.Origin, packet.addr.String(), msg.Extra.SwarmInit.PatternID, msg.Extra.SwarmInit.DronePos, msg.Extra.SwarmInit.TargetPos)
+	// }
 	// 	}
 	// 	// log.Printf("RUMOR origin %s from %s ID %d contents %s", msg.Origin, packet.addr.String(), msg.ID, msg.Text)
 

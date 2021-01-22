@@ -27,10 +27,3 @@ func (v Vec3d) Clone() Vec3d {
 		Z: v.Z,
 	}
 }
-
-// Add the given vector to the current vector
-func (v Vec3d) Add(vec Vec3d) {
-	v.X += vec.X
-	v.Y += vec.Y
-	v.Z += vec.Z
-}

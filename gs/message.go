@@ -1,14 +1,14 @@
 package gs
 
-import "go.dedis.ch/cs438/orbitalswarm/utils"
+import "gonum.org/v1/gonum/spatial/r3"
 
 type Message interface{}
 
 type TargetMessage struct {
-	targets []utils.Vec3d
+	targets []r3.Vec
 }
 
 type InitMessage struct {
 	Identifier string
-	Drones     []utils.Vec3d
+	Drones     []r3.Vec
 }

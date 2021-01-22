@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"math"
 
+	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
-	"go.dedis.ch/cs438/orbitalswarm/utils"
+	"gonum.org/v1/gonum/spatial/r3"
 )
 
 // Swarm represents a collections of drones that runs together
@@ -15,7 +16,7 @@ type Swarm struct {
 }
 
 // NewSwarm creates and returns an new Swarm, but do not start the drones
-func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []utils.Vec3d) {
+func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []r3.Vec) {
 	swarm := Swarm{
 		drones: make([]*Drone, numDrones),
 		stop:   make(chan struct{}),
@@ -24,7 +25,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 	// Drone parameters initialisation
 	gossipAddresses := make([]string, numDrones)
 	UIAddresses := make([]string, numDrones)
-	positions := make([]utils.Vec3d, numDrones)
+	positions := make([]r3.Vec, numDrones)
 	line := 0
 	column := 0
 	space := 2
@@ -35,7 +36,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		gossipAddresses[i] = gossipAddress
 		UIAddress := fmt.Sprintf("%s:%d", baseUIAddress, firstUIPort+i)
 		UIAddresses[i] = UIAddress
-		positions[i] = utils.NewVec3d(float64(line*space), 0, float64(column*space))
+		positions[i] = r3.Vec{X: float64(line * space), Y: 0, Z: float64(column * space)}
 		column = (column + 1) % edge
 		if column == 0 {
 			line++
@@ -54,7 +55,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], newHungarianGraphConsensus(), newMapping(), nil)
+		swarm.drones[i] = NewDrone(uint32(i), name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], mapping.NewHungarianMapper(), mapping.NewMapping(numDrones, i, paxosRetry), nil)
 	}
 
 	return &swarm, positions
@@ -85,4 +86,13 @@ func (s *Swarm) DronesAddresses() []string {
 		addresses[i] = d.gossipAddress
 	}
 	return addresses
+}
+
+// TO TEST, maybe not useful/good to keep it
+func (s *Swarm) DroneTargets() []r3.Vec {
+	targets := make([]r3.Vec, len(s.drones))
+	for _, d := range s.drones {
+		targets[d.GetDroneID()] = d.GetTarget()
+	}
+	return targets
 }
