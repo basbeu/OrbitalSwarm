@@ -304,12 +304,12 @@ func (g *Gossiper) trackRumor(msg *RumorMessage) (uint32, uint32) {
 }
 
 // AddPrivateMessage sends the message to the next hop.
-func (g *Gossiper) AddPrivateMessage(text, dest, origin string, hoplimit int) {
+func (g *Gossiper) AddPrivateMessage(data PrivateMessageData, dest, origin string, hoplimit int) {
 	msg := &GossipPacket{
 		Private: &PrivateMessage{
 			Origin:      origin,
 			ID:          0,
-			Text:        text,
+			Data:        data,
 			Destination: dest,
 			HopLimit:    hoplimit,
 		},

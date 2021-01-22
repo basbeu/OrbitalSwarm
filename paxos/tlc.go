@@ -38,7 +38,7 @@ func (t *TLC) stop() {
 func (t *TLC) handleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	if msg.PaxosTLC != nil {
 		if msg.PaxosTLC.Value.BlockNumber() == t.block.BlockNumber() {
-			log.Printf("%s Consensus call ! %d", g.GetIdentifier(), t.block.BlockNumber())
+			// log.Printf("%s Consensus call ! %d", g.GetIdentifier(), t.block.BlockNumber())
 			t.tlcConfirmed++
 			if t.tlcConfirmed >= t.numParticipant/2+1 {
 				log.Printf("%s Consensus of consensus !", g.GetIdentifier())
