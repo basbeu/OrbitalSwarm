@@ -22,7 +22,7 @@ func TestMapping(t *testing.T) {
 	go swarm.Run()
 
 	fac := gossip.GetFactory()
-	g, err := fac.New("127.0.0.1:33000", "GS", antiEntropy, routeTimer, numDrones, 0, paxosRetry)
+	g, err := fac.New("127.0.0.1:33000", "GS", antiEntropy, routeTimer, numDrones)
 	if err != nil {
 		panic(err)
 	}

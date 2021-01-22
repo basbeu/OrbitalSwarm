@@ -46,27 +46,21 @@ func main() {
 	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
-	numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
-	nodeIndex := flag.Int("nodeIndex", -1, "index of the node with respect to all the participants")
+	// numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
+	numParticipants := 9
 	paxosRetry := flag.Int("paxosRetry", defaultPaxosRetry, "number of seconds a Paxos proposer waits until retrying")
 
 	flag.Parse()
 
-	if *numParticipants < 0 {
-		Logger.Error().Msg("please specify a number of participants with --numParticipants")
-		return
-	}
-
-	if *nodeIndex < 0 {
-		Logger.Error().Msg("please specify a node index --nodeIndex")
-		return
-	}
+	// if *numParticipants < 0 {
+	// 	Logger.Error().Msg("please specify a number of participants with --numParticipants")
+	// 	return
+	// }
 
 	// Generate address for the groundStation
 	gossipAddress := ""
 	fac := gossip.GetFactory()
-	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer,
-		*numParticipants, *nodeIndex, *paxosRetry)
+	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, numParticipants)
 	if err != nil {
 		panic(err)
 	}

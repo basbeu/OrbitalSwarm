@@ -65,11 +65,14 @@ func (h *Hub) run() {
 				}
 			}
 		case message := <-h.wsReceived:
-			select {
-			case message.client.send <- h.onMessageReceived(message.data):
-			default:
-				close(message.client.send)
-				delete(h.clients, message.client)
+			res := h.onMessageReceived(message.data)
+			if res != nil {
+				select {
+				case message.client.send <- res:
+				default:
+					close(message.client.send)
+					delete(h.clients, message.client)
+				}
 			}
 		}
 	}

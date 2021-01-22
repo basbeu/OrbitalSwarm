@@ -48,7 +48,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 	fac := gossip.GetFactory()
 	for i := 0; i < numDrones; i++ {
 		name := fmt.Sprintf("drone%d", i)
-		g, err := fac.New(gossipAddresses[i], name, antiEntropy, routeTimer, numDrones, i, paxosRetry)
+		g, err := fac.New(gossipAddresses[i], name, antiEntropy, routeTimer, numDrones)
 
 		if err != nil {
 			panic(err)

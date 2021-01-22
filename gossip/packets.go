@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
+	"gonum.org/v1/gonum/spatial/r3"
 )
 
 // GetFactory returns the Gossip factory
@@ -53,7 +54,10 @@ func (g GossipPacket) Copy() GossipPacket {
 		private.HopLimit = g.Private.HopLimit
 		private.ID = g.Private.ID
 		private.Origin = g.Private.Origin
-		private.Text = g.Private.Text
+		private.Data = PrivateMessageData{
+			Location: g.Private.Data.Location,
+			DroneID:  g.Private.Data.DroneID,
+		}
 	}
 
 	return GossipPacket{
@@ -94,13 +98,19 @@ type RouteStruct struct {
 	LastID uint32
 }
 
+// PrivateMessageData contains the location of a drone and the droneId
+type PrivateMessageData struct {
+	Location r3.Vec `json:"location"`
+	DroneID  uint32 `json:"droneId"`
+}
+
 // PrivateMessage is sent privately to one peer
 type PrivateMessage struct {
-	Origin      string `json:"origin"`
-	ID          uint32 `json:"id"`
-	Text        string `json:"text"`
-	Destination string `json:"destination"`
-	HopLimit    int    `json:"hoplimit"`
+	Origin      string             `json:"origin"`
+	ID          uint32             `json:"id"`
+	Data        PrivateMessageData `json:"data"`
+	Destination string             `json:"destination"`
+	HopLimit    int                `json:"hoplimit"`
 }
 
 // CallbackPacket describes the content of a callback
@@ -135,7 +145,7 @@ type NewMessageCallback func(origin string, message GossipPacket)
 // GossipFactory provides the primitive to instantiate a new Gossiper
 type GossipFactory interface {
 	New(address, identifier string, antiEntropy int, routeTimer int,
-		numParticipant int, nodeIndex, paxosRetry int) (*Gossiper, error)
+		numParticipant int) (*Gossiper, error)
 }
 
 // BaseGossiper ...
@@ -157,7 +167,7 @@ type BaseGossiper interface {
 	// with the identifier of g. It returns the ID of the message
 	AddMessage(text string) uint32
 	// AddPrivateMessage
-	AddPrivateMessage(text string, dest string, origin string, hoplimit int)
+	AddPrivateMessage(data PrivateMessageData, dest string, origin string, hoplimit int)
 	// AddExtraMessage allow to send some extra message via the rumors system
 	AddExtraMessage(paxosMsg *extramessage.ExtraMessage) uint32
 	// AddAddresses takes any number of node addresses that the gossiper can contact

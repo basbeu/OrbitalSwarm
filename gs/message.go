@@ -5,7 +5,7 @@ import "gonum.org/v1/gonum/spatial/r3"
 type Message interface{}
 
 type TargetMessage struct {
-	targets []r3.Vec
+	Targets []r3.Vec
 }
 
 type InitMessage struct {
