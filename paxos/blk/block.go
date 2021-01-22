@@ -13,6 +13,7 @@ import (
 const (
 	blockNamingStr  = "NamingBlock"
 	blockMappingStr = "MappingBlock"
+	blockPathStr    = "PathBlock"
 )
 
 type BlockContainer struct {
@@ -48,10 +49,12 @@ func (b *BlockContainer) UnmarshalJSON(data []byte) error {
 	blockTypes := map[string]reflect.Type{
 		blockNamingStr:  reflect.TypeOf(NamingBlock{}),
 		blockMappingStr: reflect.TypeOf(MappingBlock{}),
+		blockPathStr:    reflect.TypeOf(PathBlock{}),
 	}
 	blockContentTypes := map[string]reflect.Type{
 		blockNamingStr:  reflect.TypeOf(NamingBlockContent{}),
 		blockMappingStr: reflect.TypeOf(MappingBlockContent{}),
+		blockPathStr:    reflect.TypeOf(PathBlockContent{}),
 	}
 
 	//Unmarshall in generic map[string]interface{}

@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
+
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 	"gonum.org/v1/gonum/spatial/r3"
@@ -1639,7 +1641,7 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 	require.Equal(t, fullName, node.GetIdentifier())
 
 	naming := paxos.NewNaming(template.numParticipants, template.nodeIndex, template.paxosRetry)
-	drone := NewDrone(0, node.GetIdentifier(), addr, addr, node, node.GetNodes(), r3.Vec{}, mapping.NewHungarianMapper(), nil, naming)
+	drone := NewDrone(0, node.GetIdentifier(), addr, addr, node, node.GetNodes(), r3.Vec{}, mapping.NewHungarianMapper(), nil, naming, pathgenerator.NewGeneticPathGenerator(), nil)
 
 	return nodeInfo{
 		id:       node.GetIdentifier(),

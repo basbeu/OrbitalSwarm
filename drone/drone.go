@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
+	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
 	"go.dedis.ch/cs438/orbitalswarm/paxos"
 	"gonum.org/v1/gonum/spatial/r3"
 
-	//"go.dedis.ch/cs438/orbitalswarm/client"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"golang.org/x/xerrors"
 
@@ -32,6 +32,15 @@ const (
 	requestIDKey key = 0
 )
 
+type state int
+
+const (
+	MAPPING state = iota
+	GENERATING_PATH
+	MOVING
+	IDLE
+)
+
 // ClientMessage internally represents messages comming from the client
 type ClientMessage struct {
 	Contents    string `json:"contents"`
@@ -43,6 +52,7 @@ type ClientMessage struct {
 type Drone struct {
 	sync.Mutex
 	droneID       uint32
+	status        state
 	uiAddress     string
 	identifier    string
 	gossipAddress string
@@ -54,6 +64,9 @@ type Drone struct {
 	mapping       *mapping.Mapping
 	targetsMapper mapping.TargetsMapper
 	naming        *paxos.Naming // TO TEST PAXOS with naming
+	pathGenerator pathgenerator.PathGenerator
+	pathGen       *pathgenerator.PathGen
+	path          []r3.Vec
 }
 
 // CtrlMessage internal representation of messages for the controller of the UI
@@ -67,10 +80,11 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming) *Drone {
+	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming, pathGenerator pathgenerator.PathGenerator, pathGen *pathgenerator.PathGen) *Drone {
 
 	c := &Drone{
 		droneID:       droneID,
+		status:        IDLE,
 		identifier:    identifier,
 		uiAddress:     uiAddress,
 		gossipAddress: gossipAddress,
@@ -78,7 +92,9 @@ func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
 		mapping:       mapping,
 		position:      position,
 		targetsMapper: targetsMapper,
-		naming:        naming, // TO TEST PAXOS with naming
+		naming:        naming, // TO TEST PAXOS with
+		pathGenerator: pathGenerator,
+		pathGen:       pathGen,
 	}
 	g.AddAddresses(addresses...)
 
@@ -271,42 +287,41 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 
 // HandleGossipMessage handle specific messages concerning the drone
 func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
-	//fmt.Println("DRONE message Handler")
-	//fmt.Println(msg)
-	//c.Lock()
-	//defer c.Unlock()
+
 	if msg.Rumor != nil {
-		//fmt.Println(msg.Rumor)
 		if msg.Rumor.Extra != nil {
-			if msg.Rumor.Extra.SwarmInit != nil {
+			if msg.Rumor.Extra.SwarmInit != nil && c.status == IDLE {
 				go func() {
 					log.Printf("%s Swarm init received", c.identifier)
 					//Begin mapping phase
-					target := c.targetsMapper.MapTargets(msg.Rumor.Extra.SwarmInit.InitialPos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets, _ := c.mapping.Propose(c.gossiper, msg.Rumor.Extra.SwarmInit.PatternID, target)
+					c.status = MAPPING
+					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
+					patternID := msg.Rumor.Extra.SwarmInit.PatternID
+					target := c.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
+					targets, _ := c.mapping.Propose(c.gossiper, patternID, target)
 					c.target = targets[c.droneID]
+
+					c.status = GENERATING_PATH
+					chanPath := c.pathGenerator.GeneratePath(dronePos, targets)
+					pathsGenerated := <-chanPath
+					paths, _ := c.pathGen.Propose(c.gossiper, patternID, pathsGenerated)
+					c.path = paths[c.droneID]
 				}()
 			} else {
-				//fmt.Println("New Paxos Message")
-				/*if msg.Rumor.Extra.PaxosTLC != nil {
-					fmt.Println("New PAXOS TLC", c.gossiper.GetIdentifier())
-				}*/
-				//c.naming.HandleExtraMessage(c.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
 
+				//c.naming.HandleExtraMessage(c.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
 				//Handle Paxos
-				c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
+				if c.status == MAPPING {
+					c.mapping.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
+				} else if c.status == GENERATING_PATH {
+					c.pathGen.HandleExtraMessage(c.gossiper, msg.Rumor.Extra)
+				}
 			}
 		}
-		c.Lock()
 		c.messages = append(c.messages, CtrlMessage{msg.Rumor.Origin, msg.Rumor.ID, msg.Rumor.Text})
-		c.Unlock()
 	} else if msg.Private != nil {
-		c.Lock()
 		c.messages = append(c.messages, CtrlMessage{msg.Private.Origin, 0, msg.Private.Text})
-		c.Unlock()
 	}
-
-	//log.Info().Msgf("messages %v", c.messages)
 }
 
 func (c *Drone) GetTarget() r3.Vec {

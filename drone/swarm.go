@@ -6,6 +6,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
+	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
@@ -55,7 +56,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(uint32(i), name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], mapping.NewHungarianMapper(), mapping.NewMapping(numDrones, i, paxosRetry), nil)
+		swarm.drones[i] = NewDrone(uint32(i), name, UIAddresses[i], gossipAddresses[i], g, peers, positions[i], mapping.NewHungarianMapper(), mapping.NewMapping(numDrones, i, paxosRetry), nil, pathgenerator.NewGeneticPathGenerator(), pathgenerator.NewPathGen(numDrones, i, paxosRetry))
 	}
 
 	return &swarm, positions

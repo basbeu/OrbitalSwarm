@@ -1,4 +1,4 @@
-package mapping
+package pathgenerator
 
 import (
 	"log"
@@ -13,43 +13,43 @@ import (
 
 type proposition struct {
 	patternID string
-	targets   []r3.Vec
-	done      chan []r3.Vec
+	paths     [][]r3.Vec
+	done      chan [][]r3.Vec
 }
 
-type Mapping struct {
+type PathGen struct {
 	blockChain *paxos.BlockChain
 
-	// PatternID -> targets
-	patterns map[string][]r3.Vec
+	// PatternID -> path
+	patterns map[string][][]r3.Vec
 
 	mutex    sync.Mutex
 	proposed bool
 	pending  []*proposition
 }
 
-func NewMapping(numDrones, nodeIndex, paxosRetry int) *Mapping {
-	return &Mapping{
-		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewMappingBlockFactory()),
+func NewPathGen(numDrones, nodeIndex, paxosRetry int) *PathGen {
+	return &PathGen{
+		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewPathBlockFactory()),
 
-		patterns: make(map[string][]r3.Vec),
+		patterns: make(map[string][][]r3.Vec),
 
 		proposed: false,
 		pending:  make([]*proposition, 0),
 	}
 }
 
-func (m *Mapping) Propose(g *gossip.Gossiper, patternID string, targets []r3.Vec) ([]r3.Vec, error) {
+func (m *PathGen) Propose(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) ([][]r3.Vec, error) {
 	//PatternID already mapped
-	if mapping, found := m.patterns[patternID]; found {
-		return mapping, nil
+	if agreement, found := m.patterns[patternID]; found {
+		return agreement, nil
 	}
 
 	// Add the propostion to the pending list
 	prop := &proposition{
 		patternID: patternID,
-		targets:   targets,
-		done:      make(chan []r3.Vec),
+		paths:     paths,
+		done:      make(chan [][]r3.Vec),
 	}
 
 	m.mutex.Lock()
@@ -57,9 +57,9 @@ func (m *Mapping) Propose(g *gossip.Gossiper, patternID string, targets []r3.Vec
 	if !m.proposed {
 		log.Printf("Propose mapping")
 		m.proposed = true
-		m.blockChain.Propose(g, &blk.MappingBlockContent{
+		m.blockChain.Propose(g, &blk.PathBlockContent{
 			PatternID: prop.patternID,
-			Targets:   prop.targets,
+			Paths:     prop.paths,
 		})
 	}
 	m.mutex.Unlock()
@@ -67,21 +67,21 @@ func (m *Mapping) Propose(g *gossip.Gossiper, patternID string, targets []r3.Vec
 	return <-prop.done, nil
 }
 
-func (m *Mapping) GetBlocks() (string, map[string]*blk.BlockContainer) {
+func (m *PathGen) GetBlocks() (string, map[string]*blk.BlockContainer) {
 	return m.blockChain.GetBlocks()
 }
 
-func (m *Mapping) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
+func (m *PathGen) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
 	blockContainer := m.blockChain.HandleExtraMessage(g, msg)
 	if blockContainer == nil {
 		return
 	}
 
-	block := blockContainer.Block.(*blk.MappingBlock)
+	block := blockContainer.Block.(*blk.PathBlock)
 	if block != nil {
-		blockContent := block.GetContent().(*blk.MappingBlockContent)
+		blockContent := block.GetContent().(*blk.PathBlockContent)
 
-		m.patterns[blockContent.PatternID] = blockContent.Targets
+		m.patterns[blockContent.PatternID] = blockContent.Paths
 
 		// Handle pending propositions
 		m.mutex.Lock()
@@ -90,7 +90,7 @@ func (m *Mapping) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.Extra
 		pendings := make([]*proposition, 0)
 
 		for _, p := range m.pending {
-			p.done <- blockContent.Targets
+			p.done <- blockContent.Paths
 			close(p.done)
 		}
 

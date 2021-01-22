@@ -45,9 +45,9 @@ func TestMapping(t *testing.T) {
 
 	g.AddExtraMessage(&extramessage.ExtraMessage{
 		SwarmInit: &extramessage.SwarmInit{
-			PatternID: "pattern1",
-			DronePos:  pos,
-			TargetPos: targets,
+			PatternID:  "pattern1",
+			InitialPos: pos,
+			TargetPos:  targets,
 		},
 	})
 
