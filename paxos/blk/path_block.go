@@ -115,7 +115,7 @@ func (f PathBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockConta
 func (f PathBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
 	return &BlockContainer{
 		Type: blockPathStr,
-		Block: &MappingBlock{
+		Block: &PathBlock{
 			BlockNum: blockNumber,
 			PrevHash: previousHash,
 			Content:  content,
