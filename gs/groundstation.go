@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -38,7 +39,8 @@ type GroundStation struct {
 	cliConn       net.Conn
 	hub           *Hub
 
-	drones []r3.Vec
+	patternID int
+	drones    []r3.Vec
 
 	handler chan []byte
 }
@@ -55,7 +57,8 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.Base
 		gossiper:      g,
 		handler:       handler,
 
-		drones: drones,
+		patternID: 1,
+		drones:    drones,
 	}
 
 	g.RegisterCallback(gs.handleGossipMessage)
@@ -112,8 +115,10 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 
 	switch v := m.(type) {
 	case TargetMessage:
+		g.patternID = g.patternID + 1
 		g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
 			SwarmInit: &extramessage.SwarmInit{
+				PatternID:  strconv.Itoa(g.patternID),
 				InitialPos: g.drones,
 				TargetPos:  v.targets,
 			},
