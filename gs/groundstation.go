@@ -42,6 +42,7 @@ type GroundStation struct {
 	patternID int
 	drones    []r3.Vec
 
+	running int
 	handler chan []byte
 }
 
@@ -129,6 +130,7 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 			TargetPos:  m.Targets,
 		},
 	})
+	g.running = len(g.drones)
 
 	// Nothing to send back
 	return nil
@@ -144,12 +146,27 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 	g.Lock()
 	defer g.Unlock()
 
-	// TODO: Define what messages are important and how to handle them
-
 	// In case of other type of message
 	if msg.Rumor != nil {
+		if msg.Rumor.Text != "" {
+			g.running--
+		}
+		if g.running == 0 {
+			message, _ := json.Marshal(ReadyMessage{
+				Ready: true,
+			})
+			g.hub.wsBroadcast <- message
+		}
 		// TODO: parse RUMOR and send appropriate message to the clients
 		// g.hub.wsBroadcast <- make([]byte, 10)
+	} else if msg.Private != nil {
+		data := msg.Private.Data
+		message, _ := json.Marshal(UpdateMessage{
+			DroneId:  data.DroneID,
+			Location: data.Location,
+		})
+		g.drones[data.DroneID] = data.Location
+		g.hub.wsBroadcast <- message
 	}
 }
 

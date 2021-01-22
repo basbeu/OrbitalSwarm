@@ -12,3 +12,12 @@ type InitMessage struct {
 	Identifier string
 	Drones     []r3.Vec
 }
+
+type UpdateMessage struct {
+	DroneId  uint32
+	Location r3.Vec
+}
+
+type ReadyMessage struct {
+	Ready bool
+}
