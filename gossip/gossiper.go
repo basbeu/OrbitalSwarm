@@ -26,8 +26,8 @@ type BaseGossipFactory struct{}
 
 // New implements gossip.GossipFactory. It creates a new gossiper.
 func (f BaseGossipFactory) New(address, identifier string, antiEntropy int,
-	routeTimer int, numParticipant, nodeIndex int, paxosRetry int) (*Gossiper, error) {
-	return NewGossiper(address, identifier, antiEntropy, routeTimer, numParticipant, nodeIndex, paxosRetry)
+	routeTimer int, numParticipant int) (*Gossiper, error) {
+	return NewGossiper(address, identifier, antiEntropy, routeTimer, numParticipant)
 }
 
 type messageTracking struct {
@@ -76,8 +76,7 @@ type Gossiper struct {
 // address. This method can panic if it is not possible to create a
 // listener on that address. To run the gossip protocol, call `Run` on the
 // gossiper.
-func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, numParticipant int,
-	nodeIndex int, paxosRetry int) (*Gossiper, error) {
+func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, numParticipant int) (*Gossiper, error) {
 	// Configs
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	rand.Seed(time.Now().UnixNano())

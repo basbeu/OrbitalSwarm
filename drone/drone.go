@@ -271,7 +271,7 @@ func (c *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
 
 // HandleGossipMessage handle specific messages concerning the drone
 func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
-	//fmt.Println("DRONE message Handler")
+	// fmt.Println("DRONE message Handler")
 	//fmt.Println(msg)
 	//c.Lock()
 	//defer c.Unlock()
