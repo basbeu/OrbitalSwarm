@@ -129,10 +129,9 @@ const uiHandlerSetup = (send) => {
    const spherical = document.getElementById("pattern-spherical");
 
    up.onclick = function () {
-      console.log(App.state);
-      console.log(moveUp(App.state.dronesLocation, 5));
       send({ Targets: moveUp(App.state.dronesLocation, 5) });
    };
+   //TODO: Implement Spherical and initial
 };
 
 // WebSocket
@@ -150,7 +149,6 @@ if (window["WebSocket"]) {
       console.log(evt.data);
       const message = JSON.parse(evt.data);
       handleMessage(sceneData, message);
-      console.log(message);
    };
 
    uiHandlerSetup((data) => {
