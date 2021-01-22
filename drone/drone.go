@@ -282,7 +282,7 @@ func (c *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 				go func() {
 					log.Printf("%s Swarm init received", c.identifier)
 					//Begin mapping phase
-					target := c.targetsMapper.MapTargets(msg.Rumor.Extra.SwarmInit.DronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
+					target := c.targetsMapper.MapTargets(msg.Rumor.Extra.SwarmInit.InitialPos, msg.Rumor.Extra.SwarmInit.TargetPos)
 					targets, _ := c.mapping.Propose(c.gossiper, msg.Rumor.Extra.SwarmInit.PatternID, target)
 					c.target = targets[c.droneID]
 				}()

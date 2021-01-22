@@ -57,7 +57,7 @@ func (e *ExtraMessage) Copy() *ExtraMessage {
 	if e.SwarmInit != nil {
 		swarmInit = new(SwarmInit)
 		swarmInit.PatternID = e.SwarmInit.PatternID
-		swarmInit.DronePos = append(swarmInit.DronePos, e.SwarmInit.DronePos...)
+		swarmInit.InitialPos = append(swarmInit.InitialPos, e.SwarmInit.InitialPos...)
 		swarmInit.TargetPos = append(swarmInit.TargetPos, e.SwarmInit.TargetPos...)
 	}
 
