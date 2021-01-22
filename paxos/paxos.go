@@ -91,7 +91,7 @@ func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 			p.proposedID = id
 			p.state = stateAwaitPromise
 
-			log.Printf("%s Propose value %d - %d", g.GetIdentifier(), id, p.paxosRetry)
+			// log.Printf("%s Propose value %d - %d", g.GetIdentifier(), id, p.paxosRetry)
 
 			// Phase 1
 			g.AddExtraMessage(&extramessage.ExtraMessage{
