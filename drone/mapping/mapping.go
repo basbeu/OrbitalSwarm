@@ -90,19 +90,19 @@ func (m *Mapping) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.Extra
 		pendings := make([]*proposition, 0)
 
 		for _, p := range m.pending {
-			if p.patternID == blockContent.PatternID {
-				p.done <- blockContent.Targets
-				close(p.done)
-			} else if !m.proposed {
-				m.blockChain.Propose(g, &blk.MappingBlockContent{
-					PatternID: p.patternID,
-					Targets:   p.targets,
-				})
-				m.proposed = true
-				pendings = append(pendings, p)
-			} else {
-				pendings = append(pendings, p)
-			}
+			// if p.patternID == blockContent.PatternID {
+			p.done <- blockContent.Targets
+			close(p.done)
+			// } else if !m.proposed {
+			// 	m.blockChain.Propose(g, &blk.MappingBlockContent{
+			// 		PatternID: p.patternID,
+			// 		Targets:   p.targets,
+			// 	})
+			// 	m.proposed = true
+			// 	pendings = append(pendings, p)
+			// } else {
+			// 	pendings = append(pendings, p)
+			// }
 		}
 
 		m.pending = pendings
