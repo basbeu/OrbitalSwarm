@@ -29,7 +29,7 @@ func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int, blockFacto
 		nodeIndex:      nodeIndex,
 		paxosRetry:     paxosRetry,
 
-		tlc:          NewTLC(numParticipant, nodeIndex, paxosRetry, 0, blockFactory.NewFirstBlock(nil), blockFactory),
+		tlc:          NewTLC(numParticipant, nodeIndex, paxosRetry, 0, blockFactory.NewGenesisBlock(nil), blockFactory),
 		tail:         nil,
 		blocks:       blocks,
 		blockFactory: blockFactory,
@@ -40,7 +40,7 @@ func (b *BlockChain) Propose(g *gossip.Gossiper, blockContent blk.BlockContent) 
 	if b.tail == nil {
 		// First block
 
-		b.tlc.propose(g, b.blockFactory.NewFirstBlock(blockContent))
+		b.tlc.propose(g, b.blockFactory.NewGenesisBlock(blockContent))
 	} else {
 		b.tlc.propose(g, b.blockFactory.NewBlock(b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
 	}
