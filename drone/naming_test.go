@@ -1631,8 +1631,7 @@ func createNode(t *testing.T, fac gossip.GossipFactory, addr, name string, opts 
 	var err error
 
 	node, err := fac.New(addr, fullName, template.antiEntropy, template.routeTimer,
-		template.numParticipants,
-		template.nodeIndex, template.paxosRetry)
+		template.numParticipants)
 	require.NoError(t, err)
 
 	require.Len(t, node.GetNodes(), 0)

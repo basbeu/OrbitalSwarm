@@ -57,7 +57,7 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.Base
 		gossiper:      g,
 		handler:       handler,
 
-		patternID: 1,
+		patternID: 0,
 		drones:    drones,
 	}
 
@@ -68,6 +68,11 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.Base
 // Run Launch the groundstation
 func (g *GroundStation) Run() {
 	logger := log.With().Timestamp().Str("role", "http proxy").Logger()
+
+	// Start gossiper
+	ready := make(chan struct{})
+	go g.gossiper.Run(ready)
+	<-ready
 
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())

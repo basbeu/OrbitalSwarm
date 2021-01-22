@@ -60,8 +60,7 @@ func main() {
 	// Generate address for the groundStation
 	gossipAddress := ""
 	fac := gossip.GetFactory()
-	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer,
-		numParticipants, -1, *paxosRetry)
+	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, numParticipants)
 	if err != nil {
 		panic(err)
 	}
