@@ -2,6 +2,14 @@ import * as THREE from "https://unpkg.com/three@0.123/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/controls/OrbitControls.js";
 // import { moveUp } from "./patterns";
 
+const moveUp = (drones, altitude) => {
+   return drones.map((d) => ({
+      X: d.X,
+      Y: d.Y + altitude,
+      Z: d.Z,
+   }));
+};
+
 let initScene = () => {
    const scene = new THREE.Scene();
    const camera = new THREE.PerspectiveCamera(
@@ -55,7 +63,7 @@ let initScene = () => {
    }
 
    window.addEventListener("resize", onWindowResize, false);
-   return { scene, camera };
+   return { scene, camera, drones: [], dronesLocation: [] };
 };
 
 // Create drones
@@ -67,9 +75,9 @@ const createDrones = ({ scene }, dronesLocation) => {
    // Create all objects
    const drones = dronesLocation.map((l) => {
       let drone = new THREE.Mesh(geometry, material);
-      drone.position.x = l.x;
-      drone.position.y = l.y + yOffset;
-      drone.position.z = l.z;
+      drone.position.x = l.X;
+      drone.position.y = l.Y + yOffset;
+      drone.position.z = l.Z;
       scene.add(drone);
       return drone;
    });
@@ -93,6 +101,16 @@ const fakeDronesLocation = () => {
    return drones;
 };
 
+const App = () => ({});
+App.state = {
+   drones: [],
+   dronesLocation: [],
+   updateDrones: (drones, locations) => {
+      App.state.drones = drones;
+      App.state.dronesLocation = locations;
+   },
+};
+
 const handleMessage = (sceneData, message) => {
    if (message.Identifier != null) {
       document.getElementById("identifier").innerHTML = message.Identifier;
@@ -100,8 +118,21 @@ const handleMessage = (sceneData, message) => {
 
    if (message.Drones != null && Array.isArray(message.Drones)) {
       document.getElementById("nbDrone").innerHTML = message.Drones.length;
-      createDrones(sceneData, message.Drones);
+      const drones = createDrones(sceneData, message.Drones);
+      App.state.updateDrones(drones, message.Drones);
    }
+};
+
+const uiHandlerSetup = (send) => {
+   const initial = document.getElementById("pattern-initial");
+   const up = document.getElementById("pattern-up");
+   const spherical = document.getElementById("pattern-spherical");
+
+   up.onclick = function () {
+      console.log(App.state);
+      console.log(moveUp(App.state.dronesLocation, 5));
+      send({ Targets: moveUp(App.state.dronesLocation, 5) });
+   };
 };
 
 // WebSocket
@@ -116,10 +147,16 @@ if (window["WebSocket"]) {
    const sceneData = initScene();
 
    conn.onmessage = function (evt) {
+      console.log(evt.data);
       const message = JSON.parse(evt.data);
       handleMessage(sceneData, message);
       console.log(message);
    };
+
+   uiHandlerSetup((data) => {
+      console.log("Send data", data);
+      conn.send(JSON.stringify(data));
+   });
 } else {
    var item = document.createElement("div");
    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";

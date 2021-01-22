@@ -106,30 +106,32 @@ func (g *GroundStation) getInitialData() []byte {
 
 // handleWebSocketMessage handle websocket messages
 func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
-	var m Message
+	var m TargetMessage
 	err := json.Unmarshal(message, &m)
 	if err != nil {
 		log.Printf("Error while unmarshaling websocket message. Message dropped")
 		return nil
 	}
 
-	switch v := m.(type) {
-	case TargetMessage:
-		g.patternID = g.patternID + 1
-		g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
-			SwarmInit: &extramessage.SwarmInit{
-				PatternID:  strconv.Itoa(g.patternID),
-				InitialPos: g.drones,
-				TargetPos:  v.targets,
-			},
-		})
-		// Nothing to send back
-		return nil
-	default:
-		// TODO: some case for the other type of message which might come from the webSocket
-		log.Printf("Unknown message send by the websocket")
-		return nil
-	}
+	// switch v := m.(type) {
+	// case TargetMessage:
+	g.patternID++
+	log.Printf("Send swarmInit")
+	g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
+		SwarmInit: &extramessage.SwarmInit{
+			PatternID:  strconv.Itoa(g.patternID),
+			InitialPos: g.drones,
+			TargetPos:  m.Targets,
+		},
+	})
+
+	// Nothing to send back
+	return nil
+	// default:
+	// 	// TODO: some case for the other type of message which might come from the webSocket
+	// 	log.Printf("Unknown message send by the websocket")
+	// 	return nil
+	// }
 }
 
 // handleGossipMessage handle gossip messages
