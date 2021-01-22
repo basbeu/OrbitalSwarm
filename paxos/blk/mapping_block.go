@@ -99,7 +99,7 @@ func (f MappingBlockFactory) NewEmptyBlock() *BlockContainer {
 	}
 }
 
-func (f MappingBlockFactory) NewFirstBlock(blockContent BlockContent) *BlockContainer {
+func (f MappingBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
 	return &BlockContainer{
 		Type: blockMappingStr,
 		Block: &MappingBlock{
