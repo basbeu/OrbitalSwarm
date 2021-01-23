@@ -136,8 +136,12 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					targets, _ := d.mapping.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
-					/*d.status = GENERATING_PATH
+					d.status = GENERATING_PATH
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
+					pathsGenerated := <-chanPath
+					paths, _ := d.mapping.ProposePaths(d.gossiper, patternID, pathsGenerated)
+					d.path = paths[d.droneID]
+					/*chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
 					paths, _ := d.pathGen.Propose(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]*/
@@ -146,13 +150,14 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 				}()
 			} else {
 
+				d.mapping.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
 				//d.naming.HandleExtraMessage(d.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
 				//Handle Paxos
-				if d.status == MAPPING {
+				/*if d.status == MAPPING {
 					d.mapping.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
 				} else if d.status == GENERATING_PATH {
 					d.pathGen.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
-				}
+				}*/
 			}
 		}
 	}
