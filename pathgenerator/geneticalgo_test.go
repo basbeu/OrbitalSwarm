@@ -71,4 +71,38 @@ func TestGenerateBasicPath(t *testing.T) {
 			require.Equal(t, expected[i][j], res[i][j])
 		}
 	}
+
+	require.Equal(t, true, validatePaths(from, dest, res))
+}
+
+func TestValidatePaths_exchange(t *testing.T) {
+	from := []r3.Vec{
+		r3.Vec{X: 0, Y: 0, Z: 0},
+		r3.Vec{X: 1, Y: 0, Z: 0},
+	}
+	dest := []r3.Vec{
+		r3.Vec{X: 1, Y: 1, Z: 0}, // 3
+		r3.Vec{X: 0, Y: 1, Z: 0}, // 3
+	}
+	res := generateBasicPath(from, dest)
+
+	time.Sleep(time.Second * time.Duration(3))
+
+	require.Equal(t, false, validatePaths(from, dest, res))
+}
+
+func TestValidatePaths_cross(t *testing.T) {
+	from := []r3.Vec{
+		r3.Vec{X: 0, Y: 0, Z: 0},
+		r3.Vec{X: 2, Y: 0, Z: 0},
+	}
+	dest := []r3.Vec{
+		r3.Vec{X: 2, Y: 1, Z: 0}, // 3
+		r3.Vec{X: 0, Y: 1, Z: 0}, // 3
+	}
+	res := generateBasicPath(from, dest)
+
+	time.Sleep(time.Second * time.Duration(3))
+
+	require.Equal(t, false, validatePaths(from, dest, res))
 }
