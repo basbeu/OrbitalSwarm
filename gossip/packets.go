@@ -3,7 +3,6 @@ package gossip
 // ========== CS-438 orbitalswarm Skeleton ===========
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -185,9 +184,6 @@ type BaseGossiper interface {
 	Run(ready chan struct{})
 	// Stop stops the Gossiper
 	Stop()
-	// Watch returns a chan that is populated with new incoming packets if
-	// fromIncoming is true, otherwise from sent messages.
-	Watch(ctx context.Context, fromIncoming bool) <-chan CallbackPacket
 	// GetRoutingTable returns the routing table of the node.
 	GetRoutingTable() map[string]*RouteStruct
 	// GetLocalAddr returns the local address (ip:port) used for sending and receiving packets to/from the network.

@@ -59,7 +59,6 @@ func (h *Hub) run() {
 				close(client.send)
 			}
 		case message := <-h.wsBroadcast:
-			log.Printf("Broad %s", message)
 			for client := range h.clients {
 				select {
 				case client.send <- message:
@@ -69,6 +68,7 @@ func (h *Hub) run() {
 				}
 			}
 		case message := <-h.wsReceived:
+			log.Printf("Broad %s", message)
 			res := h.onMessageReceived(message.data)
 			if res != nil {
 				select {
