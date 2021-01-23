@@ -44,21 +44,20 @@ type ClientMessage struct {
 // the ui, dispatching responses and messages etc
 type Drone struct {
 	sync.Mutex
-	droneID       uint32
-	status        state
-	uiAddress     string
-	identifier    string
-	gossipAddress string
-	gossiper      *gossip.Gossiper
-	cliConn       net.Conn
-	position      r3.Vec
-	target        r3.Vec
-	mapping       *mapping.Mapping
-	targetsMapper mapping.TargetsMapper
-	naming        *paxos.Naming // TO TEST PAXOS with naming
-	pathGenerator pathgenerator.PathGenerator
-	pathGen       *pathgenerator.PathGen
-	path          []r3.Vec
+	droneID         uint32
+	status          state
+	uiAddress       string
+	identifier      string
+	gossipAddress   string
+	gossiper        *gossip.Gossiper
+	cliConn         net.Conn
+	position        r3.Vec
+	target          r3.Vec
+	consensusClient *ConsensusClient
+	targetsMapper   mapping.TargetsMapper
+	naming          *paxos.Naming // TO TEST PAXOS with naming
+	pathGenerator   pathgenerator.PathGenerator
+	path            []r3.Vec
 
 	simulator *simulator
 }
@@ -74,21 +73,20 @@ type CtrlMessage struct {
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, mapping *mapping.Mapping, naming *paxos.Naming, pathGenerator pathgenerator.PathGenerator, pathGen *pathgenerator.PathGen) *Drone {
+	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, naming *paxos.Naming, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
-		droneID:       droneID,
-		status:        IDLE,
-		identifier:    identifier,
-		uiAddress:     uiAddress,
-		gossipAddress: gossipAddress,
-		gossiper:      g,
-		mapping:       mapping,
-		position:      position,
-		targetsMapper: targetsMapper,
-		naming:        naming, // TO TEST PAXOS with
-		pathGenerator: pathGenerator,
-		pathGen:       pathGen,
+		droneID:         droneID,
+		status:          IDLE,
+		identifier:      identifier,
+		uiAddress:       uiAddress,
+		gossipAddress:   gossipAddress,
+		gossiper:        g,
+		consensusClient: consensusClient,
+		position:        position,
+		targetsMapper:   targetsMapper,
+		naming:          naming, // TO TEST PAXOS with
+		pathGenerator:   pathGenerator,
 	}
 	g.AddAddresses(addresses...)
 
@@ -133,31 +131,20 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 					patternID := msg.Rumor.Extra.SwarmInit.PatternID
 					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets, _ := d.mapping.ProposeTargets(d.gossiper, patternID, target)
+					targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
 					d.status = GENERATING_PATH
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
-					paths, _ := d.mapping.ProposePaths(d.gossiper, patternID, pathsGenerated)
+					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]
-					/*chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
-					pathsGenerated := <-chanPath
-					paths, _ := d.pathGen.Propose(d.gossiper, patternID, pathsGenerated)
-					d.path = paths[d.droneID]*/
+
 					// TODO: launch simulation when needed with
 					// d.simulator.launchSimulation(paths[d.droneID])
 				}()
 			} else {
-
-				d.mapping.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
-				//d.naming.HandleExtraMessage(d.gossiper, msg.Rumor.Extra) // TO TEST PAXOS with naming
-				//Handle Paxos
-				/*if d.status == MAPPING {
-					d.mapping.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
-				} else if d.status == GENERATING_PATH {
-					d.pathGen.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
-				}*/
+				d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
 			}
 		}
 	}

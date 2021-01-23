@@ -1,4 +1,4 @@
-package mapping
+package drone
 
 import (
 	"log"
@@ -23,7 +23,7 @@ type pathProposition struct {
 	done      chan [][]r3.Vec
 }
 
-type Mapping struct {
+type ConsensusClient struct {
 	blockChain *paxos.BlockChain
 
 	// PatternID -> targets
@@ -37,8 +37,8 @@ type Mapping struct {
 	pendingPath []*pathProposition
 }
 
-func NewMapping(numDrones, nodeIndex, paxosRetry int) *Mapping {
-	return &Mapping{
+func NewConsensusClient(numDrones, nodeIndex, paxosRetry int) *ConsensusClient {
+	return &ConsensusClient{
 		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewGenericBlockFactory()),
 
 		patterns: make(map[string][]r3.Vec),
@@ -49,10 +49,10 @@ func NewMapping(numDrones, nodeIndex, paxosRetry int) *Mapping {
 	}
 }
 
-func (m *Mapping) ProposeTargets(g *gossip.Gossiper, patternID string, targets []r3.Vec) ([]r3.Vec, error) {
+func (m *ConsensusClient) ProposeTargets(g *gossip.Gossiper, patternID string, targets []r3.Vec) ([]r3.Vec, error) {
 	//PatternID already mapped
-	if mapping, found := m.patterns[patternID]; found {
-		return mapping, nil
+	if ConsensusClient, found := m.patterns[patternID]; found {
+		return ConsensusClient, nil
 	}
 
 	// Add the propostion to the pending list
@@ -77,7 +77,7 @@ func (m *Mapping) ProposeTargets(g *gossip.Gossiper, patternID string, targets [
 	return <-prop.done, nil
 }
 
-func (m *Mapping) ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) ([][]r3.Vec, error) {
+func (m *ConsensusClient) ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) ([][]r3.Vec, error) {
 	//PatternID already mapped
 	if agreement, found := m.paths[patternID]; found {
 		return agreement, nil
@@ -105,11 +105,11 @@ func (m *Mapping) ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r
 	return <-prop.done, nil
 }
 
-func (m *Mapping) GetBlocks() (string, map[string]*blk.BlockContainer) {
+func (m *ConsensusClient) GetBlocks() (string, map[string]*blk.BlockContainer) {
 	return m.blockChain.GetBlocks()
 }
 
-func (m *Mapping) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
+func (m *ConsensusClient) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
 	blockContainer := m.blockChain.HandleExtraMessage(g, msg)
 	if blockContainer == nil {
 		return
@@ -124,7 +124,7 @@ func (m *Mapping) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.Extra
 
 }
 
-func (m *Mapping) handleMappingBlock(blockContainer *blk.BlockContainer) {
+func (m *ConsensusClient) handleMappingBlock(blockContainer *blk.BlockContainer) {
 	block := blockContainer.Block.(*blk.MappingBlock)
 	if block != nil {
 		blockContent := block.GetContent().(*blk.MappingBlockContent)
@@ -146,7 +146,7 @@ func (m *Mapping) handleMappingBlock(blockContainer *blk.BlockContainer) {
 	}
 }
 
-func (m *Mapping) handlePathBlock(blockContainer *blk.BlockContainer) {
+func (m *ConsensusClient) handlePathBlock(blockContainer *blk.BlockContainer) {
 	block := blockContainer.Block.(*blk.PathBlock)
 	if block != nil {
 		blockContent := block.GetContent().(*blk.PathBlockContent)
