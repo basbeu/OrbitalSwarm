@@ -37,6 +37,10 @@ func (c *MappingBlockContent) Copy() BlockContent {
 	}
 }
 
+func (c *MappingBlockContent) BlockType() string {
+	return BlockMappingStr
+}
+
 func (b *MappingBlock) Hash() []byte {
 	h := sha256.New()
 
@@ -90,18 +94,18 @@ func (b *MappingBlock) IsContentNil() bool {
 	return mappingContent.Targets == nil
 }
 
-type MappingBlockFactory struct{}
+/*type MappingBlockFactory struct{}
 
 func (f MappingBlockFactory) NewEmptyBlock() *BlockContainer {
 	return &BlockContainer{
-		Type:  blockMappingStr,
+		Type:  BlockMappingStr,
 		Block: nil,
 	}
 }
 
 func (f MappingBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
 	return &BlockContainer{
-		Type: blockMappingStr,
+		Type: BlockMappingStr,
 		Block: &MappingBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
@@ -112,7 +116,7 @@ func (f MappingBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockCo
 
 func (f MappingBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
 	return &BlockContainer{
-		Type: blockMappingStr,
+		Type: BlockMappingStr,
 		Block: &MappingBlock{
 			BlockNum: blockNumber,
 			PrevHash: previousHash,
@@ -123,4 +127,4 @@ func (f MappingBlockFactory) NewBlock(blockNumber int, previousHash []byte, cont
 
 func NewMappingBlockFactory() MappingBlockFactory {
 	return MappingBlockFactory{}
-}
+}*/

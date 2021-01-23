@@ -30,7 +30,7 @@ type PathGen struct {
 
 func NewPathGen(numDrones, nodeIndex, paxosRetry int) *PathGen {
 	return &PathGen{
-		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewPathBlockFactory()),
+		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewGenericBlockFactory()),
 
 		patterns: make(map[string][][]r3.Vec),
 

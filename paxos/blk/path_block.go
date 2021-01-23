@@ -48,6 +48,10 @@ func (c *PathBlockContent) Copy() BlockContent {
 	}
 }
 
+func (c *PathBlockContent) BlockType() string {
+	return BlockPathStr
+}
+
 func (b *PathBlock) Hash() []byte {
 	h := sha256.New()
 
@@ -94,17 +98,17 @@ func (b *PathBlock) IsContentNil() bool {
 	return pathContent.Paths == nil
 }
 
-type PathBlockFactory struct{}
+/*type PathBlockFactory struct{}
 
 func (f PathBlockFactory) NewEmptyBlock() *BlockContainer {
 	return &BlockContainer{
-		Type:  blockPathStr,
+		Type:  BlockPathStr,
 		Block: nil,
 	}
 }
 func (f PathBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
 	return &BlockContainer{
-		Type: blockPathStr,
+		Type: BlockPathStr,
 		Block: &PathBlock{
 			BlockNum: 0,
 			PrevHash: make([]byte, 32),
@@ -114,7 +118,7 @@ func (f PathBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockConta
 }
 func (f PathBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
 	return &BlockContainer{
-		Type: blockPathStr,
+		Type: BlockPathStr,
 		Block: &PathBlock{
 			BlockNum: blockNumber,
 			PrevHash: previousHash,
@@ -125,4 +129,4 @@ func (f PathBlockFactory) NewBlock(blockNumber int, previousHash []byte, content
 
 func NewPathBlockFactory() PathBlockFactory {
 	return PathBlockFactory{}
-}
+}*/

@@ -133,14 +133,14 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 					patternID := msg.Rumor.Extra.SwarmInit.PatternID
 					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets, _ := d.mapping.Propose(d.gossiper, patternID, target)
+					targets, _ := d.mapping.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
-					d.status = GENERATING_PATH
+					/*d.status = GENERATING_PATH
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
 					paths, _ := d.pathGen.Propose(d.gossiper, patternID, pathsGenerated)
-					d.path = paths[d.droneID]
+					d.path = paths[d.droneID]*/
 					// TODO: launch simulation when needed with
 					// d.simulator.launchSimulation(paths[d.droneID])
 				}()
