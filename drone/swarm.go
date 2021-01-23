@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
@@ -56,7 +57,7 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), NewConsensusClient(numDrones, i, paxosRetry), pathgenerator.NewGeneticPathGenerator())
+		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), consensus.NewConsensusParticipant(numDrones, i, paxosRetry), pathgenerator.NewGeneticPathGenerator())
 	}
 
 	return &swarm, positions

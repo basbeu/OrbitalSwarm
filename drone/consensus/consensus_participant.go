@@ -1,4 +1,4 @@
-package drone
+package consensus
 
 import (
 	"log"
@@ -11,7 +11,7 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
-type proposition struct {
+type targetProposition struct {
 	patternID string
 	targets   []r3.Vec
 	done      chan []r3.Vec
@@ -23,7 +23,7 @@ type pathProposition struct {
 	done      chan [][]r3.Vec
 }
 
-type ConsensusClient struct {
+type ConsensusParticipant struct {
 	blockChain *paxos.BlockChain
 
 	// PatternID -> targets
@@ -33,55 +33,55 @@ type ConsensusClient struct {
 
 	mutex       sync.Mutex
 	proposed    bool
-	pending     []*proposition
+	pending     []*targetProposition
 	pendingPath []*pathProposition
 }
 
-func NewConsensusClient(numDrones, nodeIndex, paxosRetry int) *ConsensusClient {
-	return &ConsensusClient{
+func NewConsensusParticipant(numDrones, nodeIndex, paxosRetry int) *ConsensusParticipant {
+	return &ConsensusParticipant{
 		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewGenericBlockFactory()),
 
 		patterns: make(map[string][]r3.Vec),
 		paths:    make(map[string][][]r3.Vec),
 
 		proposed:    false,
-		pending:     make([]*proposition, 0),
+		pending:     make([]*targetProposition, 0),
 		pendingPath: make([]*pathProposition, 0),
 	}
 }
 
-func (m *ConsensusClient) ProposeTargets(g *gossip.Gossiper, patternID string, targets []r3.Vec) ([]r3.Vec, error) {
+func (c *ConsensusParticipant) ProposeTargets(g *gossip.Gossiper, patternID string, targets []r3.Vec) []r3.Vec {
 	//PatternID already mapped
-	if ConsensusClient, found := m.patterns[patternID]; found {
-		return ConsensusClient, nil
+	if ConsensusParticipant, found := c.patterns[patternID]; found {
+		return ConsensusParticipant
 	}
 
 	// Add the propostion to the pending list
-	prop := &proposition{
+	prop := &targetProposition{
 		patternID: patternID,
 		targets:   targets,
 		done:      make(chan []r3.Vec),
 	}
 
-	m.mutex.Lock()
-	m.pending = append(m.pending, prop)
-	if !m.proposed {
+	c.mutex.Lock()
+	c.pending = append(c.pending, prop)
+	if !c.proposed {
 		log.Printf("Propose mapping")
-		m.proposed = true
-		m.blockChain.Propose(g, &blk.MappingBlockContent{
+		c.proposed = true
+		c.blockChain.Propose(g, &blk.MappingBlockContent{
 			PatternID: prop.patternID,
 			Targets:   prop.targets,
 		})
 	}
-	m.mutex.Unlock()
+	c.mutex.Unlock()
 
-	return <-prop.done, nil
+	return <-prop.done
 }
 
-func (m *ConsensusClient) ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) ([][]r3.Vec, error) {
+func (c *ConsensusParticipant) ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) [][]r3.Vec {
 	//PatternID already mapped
-	if agreement, found := m.paths[patternID]; found {
-		return agreement, nil
+	if agreement, found := c.paths[patternID]; found {
+		return agreement
 	}
 
 	// Add the propostion to the pending list
@@ -91,27 +91,27 @@ func (m *ConsensusClient) ProposePaths(g *gossip.Gossiper, patternID string, pat
 		done:      make(chan [][]r3.Vec),
 	}
 
-	m.mutex.Lock()
-	m.pendingPath = append(m.pendingPath, prop)
-	if !m.proposed {
+	c.mutex.Lock()
+	c.pendingPath = append(c.pendingPath, prop)
+	if !c.proposed {
 		log.Printf("Propose paths")
-		m.proposed = true
-		m.blockChain.Propose(g, &blk.PathBlockContent{
+		c.proposed = true
+		c.blockChain.Propose(g, &blk.PathBlockContent{
 			PatternID: prop.patternID,
 			Paths:     prop.paths,
 		})
 	}
-	m.mutex.Unlock()
+	c.mutex.Unlock()
 
-	return <-prop.done, nil
+	return <-prop.done
 }
 
-func (m *ConsensusClient) GetBlocks() (string, map[string]*blk.BlockContainer) {
-	return m.blockChain.GetBlocks()
+func (c *ConsensusParticipant) GetBlocks() (string, map[string]*blk.BlockContainer) {
+	return c.blockChain.GetBlocks()
 }
 
-func (m *ConsensusClient) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
-	blockContainer := m.blockChain.HandleExtraMessage(g, msg)
+func (c *ConsensusParticipant) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
+	blockContainer := c.blockChain.HandleExtraMessage(g, msg)
 	if blockContainer == nil {
 		return
 	}
@@ -119,52 +119,52 @@ func (m *ConsensusClient) HandleExtraMessage(g *gossip.Gossiper, msg *extramessa
 	switch blockContainer.Type {
 	case blk.BlockMappingStr:
 		log.Printf("Received a mapping block")
-		m.handleMappingBlock(blockContainer)
+		c.handleMappingBlock(blockContainer)
 	case blk.BlockPathStr:
 		log.Printf("Received a path block")
-		m.handlePathBlock(blockContainer)
+		c.handlePathBlock(blockContainer)
 	}
 }
 
-func (m *ConsensusClient) handleMappingBlock(blockContainer *blk.BlockContainer) {
+func (c *ConsensusParticipant) handleMappingBlock(blockContainer *blk.BlockContainer) {
 	block := blockContainer.Block.(*blk.MappingBlock)
 	if block != nil {
 		blockContent := block.GetContent().(*blk.MappingBlockContent)
 
-		m.patterns[blockContent.PatternID] = blockContent.Targets
+		c.patterns[blockContent.PatternID] = blockContent.Targets
 
 		// Handle pending propositions
-		m.mutex.Lock()
-		defer m.mutex.Unlock()
-		m.proposed = false
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+		c.proposed = false
 
-		for _, p := range m.pending {
+		for _, p := range c.pending {
 			p.done <- blockContent.Targets
 			close(p.done)
 		}
 
-		m.pending = make([]*proposition, 0)
+		c.pending = make([]*targetProposition, 0)
 	}
 }
 
-func (m *ConsensusClient) handlePathBlock(blockContainer *blk.BlockContainer) {
+func (c *ConsensusParticipant) handlePathBlock(blockContainer *blk.BlockContainer) {
 	block := blockContainer.Block.(*blk.PathBlock)
 	if block != nil {
 		blockContent := block.GetContent().(*blk.PathBlockContent)
 
-		m.paths[blockContent.PatternID] = blockContent.Paths
+		c.paths[blockContent.PatternID] = blockContent.Paths
 
 		// Handle pending propositions
-		m.mutex.Lock()
-		defer m.mutex.Unlock()
-		m.proposed = false
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+		c.proposed = false
 
-		for _, p := range m.pendingPath {
+		for _, p := range c.pendingPath {
 			p.done <- blockContent.Paths
 			close(p.done)
 		}
 
-		m.pendingPath = make([]*pathProposition, 0)
+		c.pendingPath = make([]*pathProposition, 0)
 		log.Printf("Quit path handle")
 	}
 }

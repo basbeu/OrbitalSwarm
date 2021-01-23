@@ -5,6 +5,7 @@ package drone
 import (
 	"strconv"
 
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
 	"gonum.org/v1/gonum/spatial/r3"
@@ -23,6 +24,8 @@ const (
 	IDLE
 )
 
+const NUMBER_PAXOS_DRONE = 7
+
 // Drone is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
 type Drone struct {
@@ -34,7 +37,7 @@ type Drone struct {
 	path     []r3.Vec
 
 	gossiper        *gossip.Gossiper
-	consensusClient *ConsensusClient
+	consensusClient consensus.ConsensusClient
 	targetsMapper   mapping.TargetsMapper
 	pathGenerator   pathgenerator.PathGenerator
 	simulator       *simulator
@@ -43,7 +46,7 @@ type Drone struct {
 // NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
+func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient consensus.ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
 		droneID: droneID,
@@ -99,7 +102,7 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
 					log.Printf("%s Propose path", d.gossiper.GetIdentifier())
-					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
+					paths := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]
 
 					log.Printf("Start simulation")
