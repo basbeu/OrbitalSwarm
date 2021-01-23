@@ -31,7 +31,7 @@ type Naming struct {
 
 func NewNaming(numParticipant int, nodeIndex int, paxosRetry int) *Naming {
 	return &Naming{
-		blockChain: NewBlockchain(numParticipant, nodeIndex, paxosRetry, blk.NewNamingBlockFactory()),
+		blockChain: NewBlockchain(numParticipant, nodeIndex, paxosRetry, blk.NewGenericBlockFactory()),
 
 		files:    make(map[string]string),
 		proposed: false,
