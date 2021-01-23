@@ -26,6 +26,6 @@ type BlockContent interface {
 
 type BlockFactory interface {
 	NewEmptyBlock() *BlockContainer
-	NewGenesisBlock(blockContent BlockContent) *BlockContainer
+	NewGenesisBlock(blockType string, blockNumber int, content BlockContent) *BlockContainer
 	NewBlock(blockType string, blockNumber int, previousHash []byte, content BlockContent) *BlockContainer
 }

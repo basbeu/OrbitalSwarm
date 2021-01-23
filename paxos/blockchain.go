@@ -6,6 +6,7 @@ import (
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+	"go.dedis.ch/onet/v3/log"
 )
 
 // BlockChain allow to handle HandlingPackets
@@ -29,7 +30,7 @@ func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int, blockFacto
 		nodeIndex:      nodeIndex,
 		paxosRetry:     paxosRetry,
 
-		tlc:          NewTLC(numParticipant, nodeIndex, paxosRetry, 0, blockFactory.NewGenesisBlock(nil), blockFactory),
+		tlc:          NewTLC(numParticipant, nodeIndex, paxosRetry, 0, blockFactory),
 		tail:         nil,
 		blocks:       blocks,
 		blockFactory: blockFactory,
@@ -39,8 +40,8 @@ func NewBlockchain(numParticipant int, nodeIndex int, paxosRetry int, blockFacto
 func (b *BlockChain) Propose(g *gossip.Gossiper, blockContent blk.BlockContent) {
 	if b.tail == nil {
 		// First block
-
-		b.tlc.propose(g, b.blockFactory.NewGenesisBlock(blockContent))
+		log.Printf("Block type of propose : %s", blockContent.BlockType())
+		b.tlc.propose(g, b.blockFactory.NewGenesisBlock(blockContent.BlockType(), 0, blockContent))
 	} else {
 		b.tlc.propose(g, b.blockFactory.NewBlock(blockContent.BlockType(), b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
 	}
@@ -62,7 +63,7 @@ func (b *BlockChain) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.Ex
 		b.blocks[hex.EncodeToString(block.Hash())] = block
 		b.tail = block
 		b.tlc.stop()
-		b.tlc = NewTLC(b.numParticipant, b.nodeIndex, b.paxosRetry, b.tail.BlockNumber()+1, b.blockFactory.NewBlock(block.Type, b.tail.BlockNumber()+1, b.tail.Hash(), nil), b.blockFactory)
+		b.tlc = NewTLC(b.numParticipant, b.nodeIndex, b.paxosRetry, b.tail.BlockNumber()+1, b.blockFactory)
 	}
 	return block
 }

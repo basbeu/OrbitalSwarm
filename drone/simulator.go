@@ -22,7 +22,7 @@ func NewSimulator(drone interface_drone) *simulator {
 	}
 }
 
-func (s *simulator) launchSimulation(singleMoveTime int, refreshFrequency int, location r3.Vec, path []r3.Vec) {
+func (s *simulator) launchSimulation(singleMoveTime int, refreshFrequency int, location r3.Vec, path []r3.Vec) <-chan struct{} {
 	go func() {
 		sleepDuration := time.Duration(1000/refreshFrequency) * time.Millisecond
 		for _, move := range path {
@@ -36,4 +36,5 @@ func (s *simulator) launchSimulation(singleMoveTime int, refreshFrequency int, l
 		}
 		close(s.done)
 	}()
+	return s.done
 }

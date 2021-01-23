@@ -4,20 +4,13 @@ type GenericBlockFactory struct{}
 
 func (f GenericBlockFactory) NewEmptyBlock() *BlockContainer {
 	return &BlockContainer{
-		Type:  BlockMappingStr,
+		Type:  BlockPathStr,
 		Block: nil,
 	}
 }
 
-func (f GenericBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
-	return &BlockContainer{
-		Type: BlockMappingStr,
-		Block: &MappingBlock{
-			BlockNum: 0,
-			PrevHash: make([]byte, 32),
-			Content:  blockContent,
-		},
-	}
+func (f GenericBlockFactory) NewGenesisBlock(blockType string, blockNumber int, content BlockContent) *BlockContainer {
+	return f.NewBlock(blockType, blockNumber, make([]byte, 32), content)
 }
 
 func (f GenericBlockFactory) NewBlock(blockType string, blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {

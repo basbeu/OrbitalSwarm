@@ -42,6 +42,7 @@ func NewConsensusClient(numDrones, nodeIndex, paxosRetry int) *ConsensusClient {
 		blockChain: paxos.NewBlockchain(numDrones, nodeIndex, paxosRetry, blk.NewGenericBlockFactory()),
 
 		patterns: make(map[string][]r3.Vec),
+		paths:    make(map[string][][]r3.Vec),
 
 		proposed:    false,
 		pending:     make([]*proposition, 0),
@@ -92,8 +93,8 @@ func (m *ConsensusClient) ProposePaths(g *gossip.Gossiper, patternID string, pat
 
 	m.mutex.Lock()
 	m.pendingPath = append(m.pendingPath, prop)
-	if !m.proposed && len(m.pending) == 0 {
-		log.Printf("Propose mapping")
+	if !m.proposed {
+		log.Printf("Propose paths")
 		m.proposed = true
 		m.blockChain.Propose(g, &blk.PathBlockContent{
 			PatternID: prop.patternID,
@@ -117,11 +118,12 @@ func (m *ConsensusClient) HandleExtraMessage(g *gossip.Gossiper, msg *extramessa
 
 	switch blockContainer.Type {
 	case blk.BlockMappingStr:
+		log.Printf("Received a mapping block")
 		m.handleMappingBlock(blockContainer)
 	case blk.BlockPathStr:
+		log.Printf("Received a path block")
 		m.handlePathBlock(blockContainer)
 	}
-
 }
 
 func (m *ConsensusClient) handleMappingBlock(blockContainer *blk.BlockContainer) {
@@ -135,14 +137,13 @@ func (m *ConsensusClient) handleMappingBlock(blockContainer *blk.BlockContainer)
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 		m.proposed = false
-		pendings := make([]*proposition, 0)
 
 		for _, p := range m.pending {
 			p.done <- blockContent.Targets
 			close(p.done)
 		}
 
-		m.pending = pendings
+		m.pending = make([]*proposition, 0)
 	}
 }
 
@@ -157,13 +158,13 @@ func (m *ConsensusClient) handlePathBlock(blockContainer *blk.BlockContainer) {
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 		m.proposed = false
-		pendings := make([]*pathProposition, 0)
 
 		for _, p := range m.pendingPath {
 			p.done <- blockContent.Paths
 			close(p.done)
 		}
 
-		m.pendingPath = pendings
+		m.pendingPath = make([]*pathProposition, 0)
+		log.Printf("Quit path handle")
 	}
 }

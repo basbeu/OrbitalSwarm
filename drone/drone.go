@@ -105,6 +105,7 @@ func (d *Drone) UpdateLocation(location r3.Vec) {
 		Location: location,
 		DroneID:  d.droneID,
 	}, "GS", d.gossiper.GetIdentifier(), 10)
+	d.position = location
 }
 
 // GetLocalAddr returns the gossiper's local addr
@@ -131,7 +132,8 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 					patternID := msg.Rumor.Extra.SwarmInit.PatternID
 					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
+					targets := target
+					// targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
 					d.status = GENERATING_PATH
@@ -140,10 +142,17 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]
 
-					// TODO: launch simulation when needed with
-					// d.simulator.launchSimulation(paths[d.droneID])
+					log.Printf("Start simulation")
+					done := d.simulator.launchSimulation(1, 4, d.position, paths[d.droneID])
+					<-done
+
+					// TODO: once ended send rumor with id
+					log.Printf("Simulation ended")
+
+					d.status = IDLE
 				}()
 			} else {
+				// log.Printf("Handle")
 				d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
 			}
 		}

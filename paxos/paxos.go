@@ -82,7 +82,7 @@ func NewPaxos(paxosSequenceID int, numParticipant int, nodeIndex int, paxosRetry
 
 func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 	go func() {
-		// log.Printf("%s Call Propose value %s", g.GetIdentifier())
+		// log.Printf("%s Call Propose value %s", g.identifier, block.Filename)
 		if p.value == nil {
 			p.value = block
 		}
@@ -91,7 +91,7 @@ func (p *Paxos) propose(g *gossip.Gossiper, block *blk.BlockContainer) {
 			p.proposedID = id
 			p.state = stateAwaitPromise
 
-			// log.Printf("%s Propose value %d - %d", g.GetIdentifier(), id, p.paxosRetry)
+			// log.Printf("%s Propose value %s", g.identifier, p.value.Filename)
 
 			// Phase 1
 			g.AddExtraMessage(&extramessage.ExtraMessage{
