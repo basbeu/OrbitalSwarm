@@ -149,6 +149,7 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 	// In case of other type of message
 	if msg.Rumor != nil {
 		if msg.Rumor.Text != "" {
+			log.Printf(msg.Rumor.Text)
 			g.running--
 		}
 		if g.running == 0 {

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
@@ -146,11 +147,14 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					d.path = paths[d.droneID]
 
 					log.Printf("Start simulation")
+					d.status = MOVING
 					done := d.simulator.launchSimulation(1, 4, d.position, paths[d.droneID])
 					<-done
 
 					// TODO: once ended send rumor with id
 					log.Printf("Simulation ended")
+
+					d.gossiper.AddMessage(strconv.FormatUint(uint64(d.GetDroneID()), 10))
 
 					d.status = IDLE
 				}()
