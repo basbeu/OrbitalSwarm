@@ -3,9 +3,7 @@
 package drone
 
 import (
-	"net"
 	"strconv"
-	"sync"
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
@@ -13,7 +11,7 @@ import (
 
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 
-	"github.com/rs/zerolog/log"
+	"go.dedis.ch/onet/v3/log"
 )
 
 type state int
@@ -28,39 +26,33 @@ const (
 // Drone is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
 type Drone struct {
-	sync.Mutex
-	droneID         uint32
-	status          state
-	uiAddress       string
-	identifier      string
-	gossipAddress   string
+	droneID uint32
+	status  state
+
+	position r3.Vec
+	target   r3.Vec
+	path     []r3.Vec
+
 	gossiper        *gossip.Gossiper
-	cliConn         net.Conn
-	position        r3.Vec
-	target          r3.Vec
 	consensusClient *ConsensusClient
 	targetsMapper   mapping.TargetsMapper
 	pathGenerator   pathgenerator.PathGenerator
-	path            []r3.Vec
-
-	simulator *simulator
+	simulator       *simulator
 }
 
 // NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
+func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
-		droneID:         droneID,
-		status:          IDLE,
-		identifier:      identifier,
-		uiAddress:       uiAddress,
-		gossipAddress:   gossipAddress,
+		droneID: droneID,
+		status:  IDLE,
+
+		position: position,
+
 		gossiper:        g,
 		consensusClient: consensusClient,
-		position:        position,
 		targetsMapper:   targetsMapper,
 		pathGenerator:   pathGenerator,
 	}
@@ -91,22 +83,22 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil && d.status == IDLE {
 				go func() {
-					log.Printf("%s Swarm init received", d.identifier)
+					log.Printf("%s Swarm init received", d.gossiper.GetIdentifier())
 					//Begin mapping phase
 					d.status = MAPPING
 					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 					patternID := msg.Rumor.Extra.SwarmInit.PatternID
-					log.Printf("%s Start mapping", d.identifier)
+					log.Printf("%s Start mapping", d.gossiper.GetIdentifier())
 					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
 					targets := target
 					// targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
 					d.status = GENERATING_PATH
-					log.Printf("%s Generate path", d.identifier)
+					log.Printf("%s Generate path", d.gossiper.GetIdentifier())
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
-					log.Printf("%s Propose path", d.identifier)
+					log.Printf("%s Propose path", d.gossiper.GetIdentifier())
 					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]
 
@@ -131,6 +123,7 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 func (d *Drone) GetTarget() r3.Vec {
 	return d.target
 }
+
 func (d *Drone) GetDroneID() uint32 {
 	return d.droneID
 }
