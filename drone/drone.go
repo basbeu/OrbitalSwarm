@@ -3,27 +3,17 @@
 package drone
 
 import (
-	"io/ioutil"
 	"net"
-	"net/http"
 	"strconv"
 	"sync"
 
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
-	"go.dedis.ch/cs438/orbitalswarm/paxos"
 	"gonum.org/v1/gonum/spatial/r3"
 
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-)
-
-type key int
-
-const (
-	requestIDKey key = 0
 )
 
 type state int
@@ -34,12 +24,6 @@ const (
 	MOVING
 	IDLE
 )
-
-// ClientMessage internally represents messages comming from the client
-type ClientMessage struct {
-	Contents    string `json:"contents"`
-	Destination string `json:"destination"`
-}
 
 // Drone is responsible to be the glue between the gossiping protocol and
 // the ui, dispatching responses and messages etc
@@ -56,25 +40,17 @@ type Drone struct {
 	target          r3.Vec
 	consensusClient *ConsensusClient
 	targetsMapper   mapping.TargetsMapper
-	naming          *paxos.Naming // TO TEST PAXOS with naming
 	pathGenerator   pathgenerator.PathGenerator
 	path            []r3.Vec
 
 	simulator *simulator
 }
 
-// CtrlMessage internal representation of messages for the controller of the UI
-type CtrlMessage struct {
-	Origin string
-	ID     uint32
-	Text   string
-}
-
 // NewDrone returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
 func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, naming *paxos.Naming, pathGenerator pathgenerator.PathGenerator) *Drone {
+	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
 		droneID:         droneID,
@@ -86,7 +62,6 @@ func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
 		consensusClient: consensusClient,
 		position:        position,
 		targetsMapper:   targetsMapper,
-		naming:          naming, // TO TEST PAXOS with
 		pathGenerator:   pathGenerator,
 	}
 	g.AddAddresses(addresses...)
@@ -107,17 +82,6 @@ func (d *Drone) UpdateLocation(location r3.Vec) {
 		DroneID:  d.droneID,
 	}, "GS", d.gossiper.GetIdentifier(), 10)
 	d.position = location
-}
-
-// GetLocalAddr returns the gossiper's local addr
-func (d *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
-	localAddr := d.gossiper.GetLocalAddr()
-
-	_, err := w.Write([]byte(localAddr))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 }
 
 // HandleGossipMessage handle specific messages concerning the drone
@@ -151,9 +115,7 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					done := d.simulator.launchSimulation(1, 4, d.position, paths[d.droneID])
 					<-done
 
-					// TODO: once ended send rumor with id
 					log.Printf("Simulation ended")
-
 					d.gossiper.AddMessage(strconv.FormatUint(uint64(d.GetDroneID()), 10))
 
 					d.status = IDLE
@@ -171,39 +133,4 @@ func (d *Drone) GetTarget() r3.Vec {
 }
 func (d *Drone) GetDroneID() uint32 {
 	return d.droneID
-}
-
-// TO TEST PAXOS with naming
-func (d *Drone) ProposeName(metahash string, filename string) (string, error) {
-	return d.naming.Propose(d.gossiper, metahash, filename)
-}
-
-func readString(w http.ResponseWriter, r *http.Request) (string, bool) {
-	buff, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "could not read message", http.StatusBadRequest)
-		return "", false
-	}
-
-	return string(buff), true
-}
-
-// logging is a utility function that logs the http server events
-func logging(logger zerolog.Logger) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				requestID, ok := r.Context().Value(requestIDKey).(string)
-				if !ok {
-					requestID = "unknown"
-				}
-				logger.Info().Str("requestID", requestID).
-					Str("method", r.Method).
-					Str("url", r.URL.Path).
-					Str("remoteAddr", r.RemoteAddr).
-					Str("agent", r.UserAgent()).Msg("")
-			}()
-			next.ServeHTTP(w, r)
-		})
-	}
 }
