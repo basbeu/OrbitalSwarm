@@ -60,8 +60,7 @@ func main() {
 		panic(err)
 	}
 
-	// controller := NewController(*ownName, UIAddress, gossipAddress, g, bootstrapAddr...)
-	swarm, locations := drone.NewSwarm(9, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
+	swarm, locations := drone.NewSwarm(20, 5, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
 
 	addresses := swarm.DronesAddresses()
 	g.AddAddresses(addresses...)

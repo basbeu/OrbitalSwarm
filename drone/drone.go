@@ -5,6 +5,9 @@ package drone
 import (
 	"strconv"
 
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
 	"gonum.org/v1/gonum/spatial/r3"
@@ -17,14 +20,13 @@ import (
 type state int
 
 const (
-	MAPPING state = iota
+	IDLE state = iota
+	READY
+	MAPPING
 	GENERATING_PATH
 	MOVING
-	IDLE
 )
 
-// Drone is responsible to be the glue between the gossiping protocol and
-// the ui, dispatching responses and messages etc
 type Drone struct {
 	droneID uint32
 	status  state
@@ -34,16 +36,13 @@ type Drone struct {
 	path     []r3.Vec
 
 	gossiper        *gossip.Gossiper
-	consensusClient *ConsensusClient
+	consensusClient consensus.ConsensusClient
 	targetsMapper   mapping.TargetsMapper
 	pathGenerator   pathgenerator.PathGenerator
 	simulator       *simulator
 }
 
-// NewDrone returns the controller that sets up the gossiping state machine
-// as well as the web routing. It uses the same gossiping address for the
-// identifier.
-func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
+func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient consensus.ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
 		droneID: droneID,
@@ -82,39 +81,32 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 	if msg.Rumor != nil {
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil && d.status == IDLE {
-				go func() {
-					log.Printf("%s Swarm init received", d.gossiper.GetIdentifier())
-					//Begin mapping phase
-					d.status = MAPPING
-					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
-					patternID := msg.Rumor.Extra.SwarmInit.PatternID
-					log.Printf("%s Start mapping", d.gossiper.GetIdentifier())
-					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets := target
-					// targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
-					d.target = targets[d.droneID]
+				d.status = READY
 
-					d.status = GENERATING_PATH
-					log.Printf("%s Generate path", d.gossiper.GetIdentifier())
-					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
-					pathsGenerated := <-chanPath
-					log.Printf("%s Propose path", d.gossiper.GetIdentifier())
-					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
-					d.path = paths[d.droneID]
+				if d.consensusClient.IsProposer() {
+					go func() {
+						patternID := msg.Rumor.Extra.SwarmInit.PatternID
+						dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 
-					log.Printf("Start simulation")
-					d.status = MOVING
-					done := d.simulator.launchSimulation(1, 4, d.position, paths[d.droneID])
-					<-done
+						targets := d.mapTarget(patternID, dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
 
-					log.Printf("Simulation ended")
-					d.gossiper.AddMessage(strconv.FormatUint(uint64(d.GetDroneID()), 10))
+						d.generatePaths(patternID, dronePos, targets)
 
-					d.status = IDLE
-				}()
+						d.fly()
+					}()
+				}
 			} else {
 				// log.Printf("Handle")
-				d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
+				blockContainer := d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
+
+				if blockContainer != nil {
+					if blockContainer.Type == blk.BlockPathStr {
+						blockContent := blockContainer.GetContent().(*blk.PathBlockContent)
+
+						d.path = blockContent.Paths[d.droneID]
+						go d.fly()
+					}
+				}
 			}
 		}
 	}
@@ -126,4 +118,40 @@ func (d *Drone) GetTarget() r3.Vec {
 
 func (d *Drone) GetDroneID() uint32 {
 	return d.droneID
+}
+
+func (d *Drone) mapTarget(patternID string, initialPos, targetsPos []r3.Vec) []r3.Vec {
+	log.Printf("%s Swarm init received", d.gossiper.GetIdentifier())
+	//Begin mapping phase
+	d.status = MAPPING
+	log.Printf("%s Start mapping", d.gossiper.GetIdentifier())
+	target := d.targetsMapper.MapTargets(initialPos, targetsPos)
+	targets := target
+	// targets := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
+	d.target = targets[d.droneID]
+	return targets
+}
+
+func (d *Drone) generatePaths(patternID string, dronePos, targets []r3.Vec) {
+	d.status = GENERATING_PATH
+	log.Printf("%s Generate path", d.gossiper.GetIdentifier())
+	chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
+	pathsGenerated := <-chanPath
+	log.Printf("%s Propose path", d.gossiper.GetIdentifier())
+	paths := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
+	d.path = paths[d.droneID]
+}
+
+func (d *Drone) fly() {
+	if d.status != IDLE && d.status != MOVING {
+		log.Printf("Start simulation")
+		d.status = MOVING
+		done := d.simulator.launchSimulation(1, 4, d.position, d.path)
+		<-done
+
+		log.Printf("Simulation ended")
+		d.gossiper.AddMessage(strconv.FormatUint(uint64(d.GetDroneID()), 10))
+
+		d.status = IDLE
+	}
 }
