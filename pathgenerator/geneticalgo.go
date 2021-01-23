@@ -1,6 +1,8 @@
 package pathgenerator
 
 import (
+	"log"
+
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
@@ -31,11 +33,6 @@ func (g *GeneticPathGenerator) Stop() {
 
 }
 
-// v1 Using a simple shortest path
-func v1(from []r3.Vec, dest []r3.Vec) {
-
-}
-
 // generateBasicPath generate a basic path such as to have a minimal set of moves to reach the mapping target
 func generateBasicPath(from []r3.Vec, dest []r3.Vec) [][]r3.Vec {
 	still := r3.Vec{X: 0, Y: 0, Z: 0}
@@ -60,18 +57,18 @@ func generateBasicPath(from []r3.Vec, dest []r3.Vec) [][]r3.Vec {
 	for targetReached != len(paths) {
 		targetReached = 0
 		for i, v := range remaining {
-			if v.X > 0 {
-				paths[i] = append(paths[i], right)
-				remaining[i] = remaining[i].Sub(right)
-			} else if v.X < 0 {
-				paths[i] = append(paths[i], left)
-				remaining[i] = remaining[i].Sub(left)
-			} else if v.Y > 0 {
+			if v.Y > 0 {
 				paths[i] = append(paths[i], up)
 				remaining[i] = remaining[i].Sub(up)
 			} else if v.Y < 0 {
 				paths[i] = append(paths[i], down)
 				remaining[i] = remaining[i].Sub(down)
+			} else if v.X > 0 {
+				paths[i] = append(paths[i], right)
+				remaining[i] = remaining[i].Sub(right)
+			} else if v.X < 0 {
+				paths[i] = append(paths[i], left)
+				remaining[i] = remaining[i].Sub(left)
 			} else if v.Z > 0 {
 				paths[i] = append(paths[i], forward)
 				remaining[i] = remaining[i].Sub(forward)
@@ -80,6 +77,8 @@ func generateBasicPath(from []r3.Vec, dest []r3.Vec) [][]r3.Vec {
 				remaining[i] = remaining[i].Sub(backward)
 			} else {
 				paths[i] = append(paths[i], still)
+			}
+			if remaining[i] == still {
 				targetReached++
 			}
 		}
@@ -95,21 +94,25 @@ func validatePaths(from []r3.Vec, dest []r3.Vec, paths [][]r3.Vec) bool {
 		locations[i] = make([]r3.Vec, len(paths[0])+1)
 	}
 	for i, location := range from {
-		locations[0][i] = location
+		locations[i][0] = location
 	}
 
 	if len(paths) == 0 {
 		return true
 	}
 
-	for round := 1; round < len(paths[0]); round++ {
+	for round := 1; round <= len(paths[0]); round++ {
 		set := make(map[r3.Vec]bool)
+
 		// Detect position identical for 2 drones or underground
 		for i := 0; i < len(paths); i++ {
-			locations[i][round] = locations[i][round-1].Add(paths[i][round])
-
-			if locations[i][round].Y < 0 || set[locations[i][round]] == true {
-				println("ERROR : drone at same location at given round")
+			locations[i][round] = locations[i][round-1].Add(paths[i][round-1])
+			if locations[i][round].Y < 0 {
+				log.Printf("ERROR : drone under ground level")
+				return false
+			}
+			if set[locations[i][round]] == true {
+				log.Printf("ERROR : drone at same location at given round")
 				return false
 			}
 			set[locations[i][round]] = true
@@ -120,7 +123,7 @@ func validatePaths(from []r3.Vec, dest []r3.Vec, paths [][]r3.Vec) bool {
 			for j := i + 1; j < len(locations); j++ {
 				if locations[i][round] == locations[j][round-1] &&
 					locations[j][round-1] == locations[i][round] {
-					println("ERROR : Drone switch location")
+					log.Printf("ERROR : Drone switch location")
 					return false
 				}
 			}
