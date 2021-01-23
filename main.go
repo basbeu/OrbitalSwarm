@@ -6,12 +6,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"time"
 
@@ -75,27 +70,4 @@ func main() {
 
 	go swarm.Run()
 	groundStation.Run()
-}
-
-func sendWatch(p gossip.CallbackPacket, u *url.URL) {
-	msgBuf, err := json.Marshal(p)
-	if err != nil {
-		Logger.Err(err).Msg("failed to marshal packet: %v")
-		return
-	}
-
-	req := &http.Request{
-		Method: "POST",
-		URL:    u,
-		Header: map[string][]string{
-			"Content-Type": {"application/json; charset=UTF-8"},
-		},
-		Body: ioutil.NopCloser(bytes.NewReader(msgBuf)),
-	}
-
-	Logger.Info().Msgf("sending a post watch to %s", u)
-	_, err = http.DefaultClient.Do(req)
-	if err != nil {
-		Logger.Err(err).Msgf("failed to call watch to %s", u)
-	}
 }

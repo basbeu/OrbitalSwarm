@@ -112,6 +112,7 @@ func (g *GroundStation) getInitialData() []byte {
 
 // handleWebSocketMessage handle websocket messages
 func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
+	log.Printf("data %s", message)
 	var m TargetMessage
 	err := json.Unmarshal(message, &m)
 	if err != nil {
@@ -143,9 +144,6 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 
 // handleGossipMessage handle gossip messages
 func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPacket) {
-	g.Lock()
-	defer g.Unlock()
-
 	// In case of other type of message
 	if msg.Rumor != nil {
 		if msg.Rumor.Text != "" {

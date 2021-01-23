@@ -155,11 +155,6 @@ func (h *MessageHandler) HandlePacket(g *Gossiper, packet HandlingPacket) error 
 func (h *MessageHandler) handlePacket(g *Gossiper, packet HandlingPacket) {
 	msg := packet.data
 
-	// Call the watcher
-	if packet.addr != g.server.Address {
-		g.inWatcher.Notify(CallbackPacket{Addr: packet.addr.String(), Msg: msg.Copy()})
-	}
-
 	// Update address liste
 	g.AddAddresses(packet.addr.String())
 

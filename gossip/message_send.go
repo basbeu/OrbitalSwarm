@@ -34,9 +34,6 @@ func (g *Gossiper) BroadcastMessageExcept(msg GossipPacket, exceptAddresses stri
 		if node != exceptAddresses {
 			defer recover()
 			g.sending <- UDPPacket{data: jsonData, addr: addr}
-
-			// Out Watcher
-			g.outWatcher.Notify(CallbackPacket{Addr: node, Msg: msg.Copy()})
 		}
 	}
 }
@@ -63,9 +60,6 @@ func (g *Gossiper) SendMessageTo(msg GossipPacket, addr string) {
 		}
 	}()
 	g.sending <- UDPPacket{data: packet, addr: address}
-
-	// Notify watcher
-	g.outWatcher.Notify(CallbackPacket{Addr: addr, Msg: msg.Copy()})
 }
 
 // CreateStatusMessage send a status message to the given address
