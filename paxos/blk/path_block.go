@@ -97,36 +97,3 @@ func (b *PathBlock) IsContentNil() bool {
 	pathContent := b.Content.(*PathBlockContent)
 	return pathContent.Paths == nil
 }
-
-/*type PathBlockFactory struct{}
-
-func (f PathBlockFactory) NewEmptyBlock() *BlockContainer {
-	return &BlockContainer{
-		Type:  BlockPathStr,
-		Block: nil,
-	}
-}
-func (f PathBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
-	return &BlockContainer{
-		Type: BlockPathStr,
-		Block: &PathBlock{
-			BlockNum: 0,
-			PrevHash: make([]byte, 32),
-			Content:  blockContent,
-		},
-	}
-}
-func (f PathBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
-	return &BlockContainer{
-		Type: BlockPathStr,
-		Block: &PathBlock{
-			BlockNum: blockNumber,
-			PrevHash: previousHash,
-			Content:  content,
-		},
-	}
-}
-
-func NewPathBlockFactory() PathBlockFactory {
-	return PathBlockFactory{}
-}*/
