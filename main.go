@@ -12,6 +12,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.dedis.ch/cs438/orbitalswarm/drone"
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"go.dedis.ch/cs438/orbitalswarm/gs"
 )
@@ -42,7 +43,7 @@ func main() {
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
 	// numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
-	numParticipants := 9
+	numParticipants := 20
 	paxosRetry := flag.Int("paxosRetry", defaultPaxosRetry, "number of seconds a Paxos proposer waits until retrying")
 
 	flag.Parse()
@@ -60,12 +61,12 @@ func main() {
 		panic(err)
 	}
 
-	swarm, locations := drone.NewSwarm(20, 5, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
+	swarm, locations := drone.NewSwarm(numParticipants, 5, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
 
 	addresses := swarm.DronesAddresses()
 	g.AddAddresses(addresses...)
 
-	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations)
+	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations, consensus.NewConsensusReader(numParticipants, numParticipants+1, *paxosRetry))
 
 	go swarm.Run()
 	groundStation.Run()

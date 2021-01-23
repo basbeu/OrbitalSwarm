@@ -311,6 +311,10 @@ const handleMessage = (message) => {
       App.ui.updateIdentifier(message.Identifier);
    }
 
+   if (message.Paths != null) {
+      App.state.startSimulation(message.Paths);
+   }
+
    if (message.Drones != null && Array.isArray(message.Drones)) {
       App.ui.updateNbDrones(message.Drones.length);
       App.state.createDrones(message.Drones);

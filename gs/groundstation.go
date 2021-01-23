@@ -13,6 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 	"gonum.org/v1/gonum/spatial/r3"
@@ -35,10 +38,11 @@ type GroundStation struct {
 	uiAddress     string
 	identifier    string
 	gossipAddress string
-	gossiper      gossip.BaseGossiper
+	gossiper      *gossip.Gossiper
 	cliConn       net.Conn
 	hub           *Hub
 
+	consensus consensus.ConsensusClient
 	patternID int
 	drones    []r3.Vec
 
@@ -49,7 +53,7 @@ type GroundStation struct {
 // NewGroundStation returns the controller that sets up the gossiping state machine
 // as well as the web routing. It uses the same gossiping address for the
 // identifier.
-func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.BaseGossiper, drones []r3.Vec) *GroundStation {
+func NewGroundStation(identifier, uiAddress, gossipAddress string, g *gossip.Gossiper, drones []r3.Vec, consensus consensus.ConsensusClient) *GroundStation {
 	handler := make(chan []byte)
 	gs := &GroundStation{
 		identifier:    identifier,
@@ -58,6 +62,7 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g gossip.Base
 		gossiper:      g,
 		handler:       handler,
 
+		consensus: consensus,
 		patternID: 0,
 		drones:    drones,
 	}
@@ -146,6 +151,18 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPacket) {
 	// In case of other type of message
 	if msg.Rumor != nil {
+		if msg.Rumor.Extra != nil {
+			blockContainer := g.consensus.HandleExtraMessage(g.gossiper, msg.Rumor.Extra)
+			if blockContainer != nil && blockContainer.Type == blk.BlockPathStr {
+				block := blockContainer.GetContent().(*blk.PathBlockContent)
+				paths := block.Paths
+				log.Printf("Detect simulation for UI")
+				message, _ := json.Marshal(SimulationMessage{
+					Paths: paths,
+				})
+				g.hub.wsBroadcast <- message
+			}
+		}
 		if msg.Rumor.Text != "" {
 			log.Printf(msg.Rumor.Text)
 			g.running--
