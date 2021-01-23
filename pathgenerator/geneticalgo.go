@@ -20,11 +20,11 @@ func NewGeneticPathGenerator() *GeneticPathGenerator {
 func (g *GeneticPathGenerator) GeneratePath(from []r3.Vec, dest []r3.Vec) <-chan [][]r3.Vec {
 	go func() {
 		paths := generateBasicPath(from, dest)
-		if validatePaths(from, dest, paths) {
-			g.done <- paths
-		} else {
-			println("Basic path not correct")
-		}
+		// if validatePaths(from, dest, paths) {
+		g.done <- paths
+		// } else {
+		// 	println("Basic path not correct")
+		// }
 	}()
 	return g.done
 }

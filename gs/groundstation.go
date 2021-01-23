@@ -112,6 +112,7 @@ func (g *GroundStation) getInitialData() []byte {
 
 // handleWebSocketMessage handle websocket messages
 func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
+	log.Printf("data %s", message)
 	var m TargetMessage
 	err := json.Unmarshal(message, &m)
 	if err != nil {
@@ -143,12 +144,10 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 
 // handleGossipMessage handle gossip messages
 func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPacket) {
-	g.Lock()
-	defer g.Unlock()
-
 	// In case of other type of message
 	if msg.Rumor != nil {
 		if msg.Rumor.Text != "" {
+			log.Printf(msg.Rumor.Text)
 			g.running--
 		}
 		if g.running == 0 {
@@ -160,7 +159,6 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 		// TODO: parse RUMOR and send appropriate message to the clients
 		// g.hub.wsBroadcast <- make([]byte, 10)
 	} else if msg.Private != nil {
-		log.Printf("Hanlde update location")
 		data := msg.Private.Data
 		message, err := json.Marshal(UpdateMessage{
 			DroneId:  data.DroneID,
@@ -171,7 +169,6 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 		}
 		g.drones[data.DroneID] = data.Location
 		g.hub.wsBroadcast <- message
-		log.Printf("Ended update location")
 	}
 }
 

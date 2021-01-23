@@ -12,61 +12,113 @@ const moveUp = (drones, altitude) => {
 
 const App = () => ({});
 App.scene = {
-   data: {},
+   data: {
+      swapped: false,
+   },
    init: () => {
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(
+      const sceneReal = new THREE.Scene();
+      const sceneSimu = new THREE.Scene();
+      const cameraMain = new THREE.PerspectiveCamera(
+         75,
+         window.innerWidth / window.innerHeight,
+         0.1,
+         1000
+      );
+      const cameraSecondary = new THREE.PerspectiveCamera(
          75,
          window.innerWidth / window.innerHeight,
          0.1,
          1000
       );
 
-      const renderer = new THREE.WebGLRenderer();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.getElementById("scene").appendChild(renderer.domElement);
+      const rendererMain = new THREE.WebGLRenderer();
+      const rendererSecondary = new THREE.WebGLRenderer();
+
+      rendererMain.setSize(window.innerWidth, window.innerHeight);
+      rendererSecondary.setSize(window.innerWidth / 5, window.innerHeight / 5);
+      document.getElementById("scene").appendChild(rendererMain.domElement);
+      document
+         .getElementById("secondary-scene")
+         .appendChild(rendererSecondary.domElement);
       // document.body.prepend(renderer.domElement);
 
       // controls
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.minDistance = 20;
-      controls.maxDistance = 50;
-      controls.maxPolarAngle = Math.PI / 2;
-      controls.update();
+      const controlsMain = new OrbitControls(
+         cameraMain,
+         rendererMain.domElement
+      );
+      controlsMain.minDistance = 20;
+      controlsMain.maxDistance = 50;
+      controlsMain.maxPolarAngle = Math.PI / 2;
+      controlsMain.update();
+
+      const controlsSecondary = new OrbitControls(
+         cameraSecondary,
+         rendererSecondary.domElement
+      );
+      controlsSecondary.minDistance = 20;
+      controlsSecondary.maxDistance = 50;
+      controlsSecondary.maxPolarAngle = Math.PI / 2;
+      controlsSecondary.update();
 
       // helper
-      scene.add(new THREE.AxesHelper(20));
+      sceneReal.add(new THREE.AxesHelper(20));
+      sceneSimu.add(new THREE.AxesHelper(20));
 
       // light
-      scene.add(new THREE.AmbientLight(0x222222));
-      const light = new THREE.PointLight(0xffffff, 1);
-      light.position.set(50, 50, 50);
-      scene.add(light);
+      sceneReal.add(new THREE.AmbientLight(0x222222));
+      sceneSimu.add(new THREE.AmbientLight(0x222222));
+      const lightReal = new THREE.PointLight(0xffffff, 1);
+      const lightSimu = new THREE.PointLight(0xffffff, 1);
+      lightReal.position.set(50, 50, 50);
+      lightSimu.position.set(50, 50, 50);
+      sceneReal.add(lightReal);
+      sceneSimu.add(lightSimu);
 
-      camera.position.set(10, 10, 10);
-      camera.lookAt(new THREE.Vector3(0, 0, 0));
-      controls.update();
+      cameraMain.position.set(10, 10, 10);
+      cameraSecondary.position.set(10, 10, 10);
+      cameraMain.lookAt(new THREE.Vector3(0, 0, 0));
+      cameraSecondary.lookAt(new THREE.Vector3(0, 0, 0));
+      controlsMain.update();
+      controlsSecondary.update();
 
       // Render
       const animate = function () {
          requestAnimationFrame(animate);
 
-         controls.update();
+         controlsMain.update();
+         controlsSecondary.update();
 
-         renderer.render(scene, camera);
+         const swapped = App.scene.data.swapped;
+         rendererMain.render(!swapped ? sceneReal : sceneSimu, cameraMain);
+         rendererSecondary.render(
+            !swapped ? sceneSimu : sceneReal,
+            cameraSecondary
+         );
       };
       animate();
 
       function onWindowResize() {
-         camera.aspect = window.innerWidth / window.innerHeight;
-         camera.updateProjectionMatrix();
+         cameraMain.aspect = window.innerWidth / window.innerHeight;
+         cameraSecondary.aspect = window.innerWidth / window.innerHeight;
+         cameraMain.updateProjectionMatrix();
+         cameraSecondary.updateProjectionMatrix();
 
-         renderer.setSize(window.innerWidth, window.innerHeight);
-         renderer.render(scene, camera);
+         rendererMain.setSize(window.innerWidth, window.innerHeight);
+         rendererMain.render(sceneReal, cameraMain);
+
+         rendererSecondary.setSize(
+            window.innerWidth / 5,
+            window.innerHeight / 5
+         );
+         rendererSecondary.render(sceneSimu, cameraSecondary);
       }
 
       window.addEventListener("resize", onWindowResize, false);
-      App.scene.data = { scene, camera };
+      App.scene.data = { scene: sceneReal, camera: cameraMain };
+   },
+   swap: () => {
+      App.scene.data.swapped = !App.scene.data.swapped;
    },
 };
 
@@ -94,11 +146,10 @@ App.state = {
       App.state.locations = locations;
    },
    updateDrone: (droneId, location) => {
-      App.state.drones[droneId].location.x = location.X;
-      App.state.drones[droneId].location.y = location.Y;
-      App.state.drones[droneId].location.z = location.Z;
+      App.state.drones[droneId].position.x = location.X;
+      App.state.drones[droneId].position.y = location.Y;
+      App.state.drones[droneId].position.z = location.Z;
       App.state.locations[droneId] = location;
-      // App.scene.data.scene.
    },
 };
 
@@ -109,14 +160,18 @@ App.ui = {
       App.ui.updateIdentifier("Unknown");
 
       const initial = document.getElementById("pattern-initial");
-      const up = document.getElementById("pattern-up");
       const spherical = document.getElementById("pattern-spherical");
+      //TODO: Implement Spherical and initial
 
-      up.onclick = function () {
+      document.getElementById("pattern-up").onclick = function () {
          send({ Targets: moveUp(App.state.locations, 5) });
          App.ui.updateStatus(false);
       };
-      //TODO: Implement Spherical and initial
+
+      // Swap
+      document.getElementById("swap").onclick = () => {
+         App.scene.swap();
+      };
    },
    updateIdentifier: (identifier) => {
       document.getElementById("identifier").innerHTML = identifier;
@@ -157,19 +212,21 @@ if (window["WebSocket"]) {
    conn.onclose = function (evt) {
       var item = document.createElement("div");
       item.innerHTML = "<b>Connection closed.</b>";
-      console.log(item);
+      console.log("Closed connection :'(");
    };
 
    App.scene.init();
    App.ui.init((data) => {
       console.log("Send data", data);
+      console.log("Size : " + JSON.stringify(data).length);
       conn.send(JSON.stringify(data));
    });
 
    conn.onmessage = function (evt) {
-      console.log(evt.data);
-      const message = JSON.parse(evt.data);
-      handleMessage(message);
+      evt.data.split("\n").forEach((data) => {
+         const message = JSON.parse(data);
+         handleMessage(message);
+      });
    };
 } else {
    var item = document.createElement("div");

@@ -3,89 +3,56 @@
 package drone
 
 import (
-	"io/ioutil"
-	"net"
-	"net/http"
-	"sync"
+	"strconv"
 
+	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
+
+	"go.dedis.ch/cs438/orbitalswarm/drone/consensus"
 	"go.dedis.ch/cs438/orbitalswarm/drone/mapping"
 	"go.dedis.ch/cs438/orbitalswarm/pathgenerator"
-	"go.dedis.ch/cs438/orbitalswarm/paxos"
 	"gonum.org/v1/gonum/spatial/r3"
 
 	"go.dedis.ch/cs438/orbitalswarm/gossip"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-)
-
-type key int
-
-const (
-	requestIDKey key = 0
+	"go.dedis.ch/onet/v3/log"
 )
 
 type state int
 
 const (
-	MAPPING state = iota
+	IDLE state = iota
+	READY
+	MAPPING
 	GENERATING_PATH
 	MOVING
-	IDLE
 )
 
-// ClientMessage internally represents messages comming from the client
-type ClientMessage struct {
-	Contents    string `json:"contents"`
-	Destination string `json:"destination"`
-}
-
-// Drone is responsible to be the glue between the gossiping protocol and
-// the ui, dispatching responses and messages etc
 type Drone struct {
-	sync.Mutex
-	droneID         uint32
-	status          state
-	uiAddress       string
-	identifier      string
-	gossipAddress   string
+	droneID uint32
+	status  state
+
+	position r3.Vec
+	target   r3.Vec
+	path     []r3.Vec
+
 	gossiper        *gossip.Gossiper
-	cliConn         net.Conn
-	position        r3.Vec
-	target          r3.Vec
-	consensusClient *ConsensusClient
+	consensusClient consensus.ConsensusClient
 	targetsMapper   mapping.TargetsMapper
-	naming          *paxos.Naming // TO TEST PAXOS with naming
 	pathGenerator   pathgenerator.PathGenerator
-	path            []r3.Vec
-
-	simulator *simulator
+	simulator       *simulator
 }
 
-// CtrlMessage internal representation of messages for the controller of the UI
-type CtrlMessage struct {
-	Origin string
-	ID     uint32
-	Text   string
-}
-
-// NewDrone returns the controller that sets up the gossiping state machine
-// as well as the web routing. It uses the same gossiping address for the
-// identifier.
-func NewDrone(droneID uint32, identifier, uiAddress, gossipAddress string,
-	g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient *ConsensusClient, naming *paxos.Naming, pathGenerator pathgenerator.PathGenerator) *Drone {
+func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient consensus.ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
-		droneID:         droneID,
-		status:          IDLE,
-		identifier:      identifier,
-		uiAddress:       uiAddress,
-		gossipAddress:   gossipAddress,
+		droneID: droneID,
+		status:  IDLE,
+
+		position: position,
+
 		gossiper:        g,
 		consensusClient: consensusClient,
-		position:        position,
 		targetsMapper:   targetsMapper,
-		naming:          naming, // TO TEST PAXOS with
 		pathGenerator:   pathGenerator,
 	}
 	g.AddAddresses(addresses...)
@@ -108,52 +75,38 @@ func (d *Drone) UpdateLocation(location r3.Vec) {
 	d.position = location
 }
 
-// GetLocalAddr returns the gossiper's local addr
-func (d *Drone) GetLocalAddr(w http.ResponseWriter, r *http.Request) {
-	localAddr := d.gossiper.GetLocalAddr()
-
-	_, err := w.Write([]byte(localAddr))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 // HandleGossipMessage handle specific messages concerning the drone
 func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 
 	if msg.Rumor != nil {
 		if msg.Rumor.Extra != nil {
 			if msg.Rumor.Extra.SwarmInit != nil && d.status == IDLE {
-				go func() {
-					log.Printf("%s Swarm init received", d.identifier)
-					//Begin mapping phase
-					d.status = MAPPING
-					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
-					patternID := msg.Rumor.Extra.SwarmInit.PatternID
-					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
-					targets := target
-					// targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
-					d.target = targets[d.droneID]
+				d.status = READY
 
-					d.status = GENERATING_PATH
-					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
-					pathsGenerated := <-chanPath
-					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
-					d.path = paths[d.droneID]
+				if d.consensusClient.IsProposer() {
+					go func() {
+						patternID := msg.Rumor.Extra.SwarmInit.PatternID
+						dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 
-					log.Printf("Start simulation")
-					done := d.simulator.launchSimulation(1, 4, d.position, paths[d.droneID])
-					<-done
+						targets := d.mapTarget(patternID, dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
 
-					// TODO: once ended send rumor with id
-					log.Printf("Simulation ended")
+						d.generatePaths(patternID, dronePos, targets)
 
-					d.status = IDLE
-				}()
+						d.fly()
+					}()
+				}
 			} else {
 				// log.Printf("Handle")
-				d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
+				blockContainer := d.consensusClient.HandleExtraMessage(d.gossiper, msg.Rumor.Extra)
+
+				if blockContainer != nil {
+					if blockContainer.Type == blk.BlockPathStr {
+						blockContent := blockContainer.GetContent().(*blk.PathBlockContent)
+
+						d.path = blockContent.Paths[d.droneID]
+						go d.fly()
+					}
+				}
 			}
 		}
 	}
@@ -162,41 +115,43 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 func (d *Drone) GetTarget() r3.Vec {
 	return d.target
 }
+
 func (d *Drone) GetDroneID() uint32 {
 	return d.droneID
 }
 
-// TO TEST PAXOS with naming
-func (d *Drone) ProposeName(metahash string, filename string) (string, error) {
-	return d.naming.Propose(d.gossiper, metahash, filename)
+func (d *Drone) mapTarget(patternID string, initialPos, targetsPos []r3.Vec) []r3.Vec {
+	log.Printf("%s Swarm init received", d.gossiper.GetIdentifier())
+	//Begin mapping phase
+	d.status = MAPPING
+	log.Printf("%s Start mapping", d.gossiper.GetIdentifier())
+	target := d.targetsMapper.MapTargets(initialPos, targetsPos)
+	targets := target
+	// targets := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
+	d.target = targets[d.droneID]
+	return targets
 }
 
-func readString(w http.ResponseWriter, r *http.Request) (string, bool) {
-	buff, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "could not read message", http.StatusBadRequest)
-		return "", false
-	}
-
-	return string(buff), true
+func (d *Drone) generatePaths(patternID string, dronePos, targets []r3.Vec) {
+	d.status = GENERATING_PATH
+	log.Printf("%s Generate path", d.gossiper.GetIdentifier())
+	chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
+	pathsGenerated := <-chanPath
+	log.Printf("%s Propose path", d.gossiper.GetIdentifier())
+	paths := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
+	d.path = paths[d.droneID]
 }
 
-// logging is a utility function that logs the http server events
-func logging(logger zerolog.Logger) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				requestID, ok := r.Context().Value(requestIDKey).(string)
-				if !ok {
-					requestID = "unknown"
-				}
-				logger.Info().Str("requestID", requestID).
-					Str("method", r.Method).
-					Str("url", r.URL.Path).
-					Str("remoteAddr", r.RemoteAddr).
-					Str("agent", r.UserAgent()).Msg("")
-			}()
-			next.ServeHTTP(w, r)
-		})
+func (d *Drone) fly() {
+	if d.status != IDLE && d.status != MOVING {
+		log.Printf("Start simulation")
+		d.status = MOVING
+		done := d.simulator.launchSimulation(1, 4, d.position, d.path)
+		<-done
+
+		log.Printf("Simulation ended")
+		d.gossiper.AddMessage(strconv.FormatUint(uint64(d.GetDroneID()), 10))
+
+		d.status = IDLE
 	}
 }

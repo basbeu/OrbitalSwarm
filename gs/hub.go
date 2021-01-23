@@ -4,6 +4,8 @@
 
 package gs
 
+import "log"
+
 type wsMessage struct {
 	data   []byte
 	client *Client
@@ -34,10 +36,11 @@ type Hub struct {
 
 func newHub(onClientJoin func() []byte, onMessageReceived func([]byte) []byte) *Hub {
 	return &Hub{
-		wsReceived: make(chan wsMessage),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		wsReceived:  make(chan wsMessage),
+		wsBroadcast: make(chan []byte),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		clients:     make(map[*Client]bool),
 
 		onClientJoin:      onClientJoin,
 		onMessageReceived: onMessageReceived,
@@ -65,6 +68,7 @@ func (h *Hub) run() {
 				}
 			}
 		case message := <-h.wsReceived:
+			log.Printf("Broad %s", message)
 			res := h.onMessageReceived(message.data)
 			if res != nil {
 				select {

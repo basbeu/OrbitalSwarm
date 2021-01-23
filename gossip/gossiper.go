@@ -3,7 +3,6 @@ package gossip
 // ========== CS-438 Project ===========
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"math/rand"
@@ -13,7 +12,6 @@ import (
 	"time"
 
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
-	"go.dedis.ch/cs438/orbitalswarm/gossip/watcher"
 	"go.dedis.ch/onet/v3/log"
 
 	"sync"
@@ -41,9 +39,6 @@ type messageTracking struct {
 //
 // - implements gossip.BaseGossiper
 type Gossiper struct {
-	inWatcher  watcher.Watcher
-	outWatcher watcher.Watcher
-
 	Handlers map[reflect.Type]interface{}
 
 	server  *UDPServer
@@ -94,9 +89,6 @@ func NewGossiper(address, identifier string, antiEntropy int, routeTimer int, nu
 
 	// Create gossiper
 	g := &Gossiper{
-		inWatcher:  watcher.NewSimpleWatcher(),
-		outWatcher: watcher.NewSimpleWatcher(),
-
 		Handlers: make(map[reflect.Type]interface{}),
 		handler:  NewMessageHandler(),
 
@@ -484,114 +476,4 @@ func (g *Gossiper) AddRoute(peerName, nextHop string) {
 func (g *Gossiper) RegisterCallback(m NewMessageCallback) {
 	// Assuming that the callbacks are thread-safe
 	g.callback = m
-}
-
-// Watch implements gossip.BaseGossiper. It returns a chan populated with new
-// incoming packets
-func (g *Gossiper) Watch(ctx context.Context, fromIncoming bool) <-chan CallbackPacket {
-	w := g.inWatcher
-
-	if !fromIncoming {
-		w = g.outWatcher
-	}
-
-	o := &observer{
-		ch: make(chan CallbackPacket),
-	}
-
-	w.Add(o)
-
-	go func() {
-		<-ctx.Done()
-		// empty the channel
-		o.terminate()
-		w.Remove(o)
-	}()
-
-	return o.ch
-}
-
-// - implements watcher.observable
-type observer struct {
-	sync.Mutex
-	ch      chan CallbackPacket
-	buffer  []CallbackPacket
-	closed  bool
-	running bool
-}
-
-func (o *observer) Notify(i interface{}) {
-	o.Lock()
-	defer o.Unlock()
-
-	if o.closed {
-		return
-	}
-
-	if o.running {
-		o.buffer = append(o.buffer, i.(CallbackPacket))
-		return
-	}
-
-	select {
-	case o.ch <- i.(CallbackPacket):
-
-	default:
-		// The buffer size is not controlled as we assume the event will be read
-		// shortly by the caller.
-		o.buffer = append(o.buffer, i.(CallbackPacket))
-
-		o.checkSize()
-
-		o.running = true
-
-		go o.run()
-	}
-}
-
-func (o *observer) run() {
-	for {
-		o.Lock()
-
-		if len(o.buffer) == 0 {
-			o.running = false
-			o.Unlock()
-			return
-		}
-
-		msg := o.buffer[0]
-		o.buffer = o.buffer[1:]
-
-		o.Unlock()
-
-		// Wait for the channel to be available to writings.
-		o.ch <- msg
-	}
-}
-
-func (o *observer) checkSize() {
-	const warnLimit = 1000
-	if len(o.buffer) >= warnLimit {
-		log.Warn("Observer queue is growing insanely")
-	}
-}
-
-func (o *observer) terminate() {
-	o.Lock()
-	defer o.Unlock()
-
-	o.closed = true
-
-	if o.running {
-		o.running = false
-		o.buffer = nil
-
-		// Drain the message in transit to close the channel properly.
-		select {
-		case <-o.ch:
-		default:
-		}
-	}
-
-	close(o.ch)
 }
