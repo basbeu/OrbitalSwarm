@@ -146,10 +146,10 @@ func TestDecodeAssignement(t *testing.T) {
 		0, 1, 0,
 		0, 0, 1,
 	})
-	expectedRes := map[string]r3.Vec{
-		"0": r3.Vec{X: 1, Y: 1, Z: 1},
-		"1": r3.Vec{X: 2, Y: 2, Z: 2},
-		"2": r3.Vec{X: 3, Y: 3, Z: 3},
+	expectedRes := []r3.Vec{
+		r3.Vec{X: 1, Y: 1, Z: 1},
+		r3.Vec{X: 2, Y: 2, Z: 2},
+		r3.Vec{X: 3, Y: 3, Z: 3},
 	}
 
 	res := mapper.decodeAssignement(targetPos, mask)
@@ -160,10 +160,10 @@ func TestDecodeAssignement(t *testing.T) {
 		1, 0, 0,
 		0, 0, 1,
 	})
-	expectedRes = map[string]r3.Vec{
-		"0": r3.Vec{X: 2, Y: 2, Z: 2},
-		"1": r3.Vec{X: 1, Y: 1, Z: 1},
-		"2": r3.Vec{X: 3, Y: 3, Z: 3},
+	expectedRes = []r3.Vec{
+		r3.Vec{X: 2, Y: 2, Z: 2},
+		r3.Vec{X: 1, Y: 1, Z: 1},
+		r3.Vec{X: 3, Y: 3, Z: 3},
 	}
 
 	res = mapper.decodeAssignement(targetPos, mask)

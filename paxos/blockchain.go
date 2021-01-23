@@ -42,7 +42,7 @@ func (b *BlockChain) Propose(g *gossip.Gossiper, blockContent blk.BlockContent) 
 
 		b.tlc.propose(g, b.blockFactory.NewGenesisBlock(blockContent))
 	} else {
-		b.tlc.propose(g, b.blockFactory.NewBlock(b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
+		b.tlc.propose(g, b.blockFactory.NewBlock(blockContent.BlockType(), b.tail.BlockNumber()+1, b.tail.Hash(), blockContent))
 	}
 }
 
@@ -62,7 +62,7 @@ func (b *BlockChain) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.Ex
 		b.blocks[hex.EncodeToString(block.Hash())] = block
 		b.tail = block
 		b.tlc.stop()
-		b.tlc = NewTLC(b.numParticipant, b.nodeIndex, b.paxosRetry, b.tail.BlockNumber()+1, b.blockFactory.NewBlock(b.tail.BlockNumber()+1, b.tail.Hash(), nil), b.blockFactory)
+		b.tlc = NewTLC(b.numParticipant, b.nodeIndex, b.paxosRetry, b.tail.BlockNumber()+1, b.blockFactory.NewBlock(block.Type, b.tail.BlockNumber()+1, b.tail.Hash(), nil), b.blockFactory)
 	}
 	return block
 }

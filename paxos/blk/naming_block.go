@@ -29,6 +29,10 @@ func (c *NamingBlockContent) Copy() BlockContent {
 	}
 }
 
+func (c *NamingBlockContent) BlockType() string {
+	return BlockNamingStr
+}
+
 // Hash returns the hash of a block. It doesn't take the index.
 func (b *NamingBlock) Hash() []byte {
 	h := sha256.New()
@@ -82,40 +86,4 @@ func (b *NamingBlock) SetContent(blockContent BlockContent) {
 func (b *NamingBlock) IsContentNil() bool {
 	namingContent := b.Content.(*NamingBlockContent)
 	return namingContent.Metahash == nil
-}
-
-type NamingBlockFactory struct {
-}
-
-func (f NamingBlockFactory) NewGenesisBlock(blockContent BlockContent) *BlockContainer {
-	return &BlockContainer{
-		Type: blockNamingStr,
-		Block: &NamingBlock{
-			BlockNum: 0,
-			PrevHash: make([]byte, 32),
-			Content:  blockContent,
-		},
-	}
-}
-
-func (f NamingBlockFactory) NewBlock(blockNumber int, previousHash []byte, content BlockContent) *BlockContainer {
-	return &BlockContainer{
-		Type: blockNamingStr,
-		Block: &NamingBlock{
-			BlockNum: blockNumber,
-			PrevHash: previousHash,
-			Content:  content,
-		},
-	}
-}
-
-func (f NamingBlockFactory) NewEmptyBlock() *BlockContainer {
-	return &BlockContainer{
-		Type:  blockNamingStr,
-		Block: nil,
-	}
-}
-
-func NewNamingBlockFactory() NamingBlockFactory {
-	return NamingBlockFactory{}
 }
