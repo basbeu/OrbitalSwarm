@@ -131,14 +131,17 @@ func (d *Drone) HandleGossipMessage(origin string, msg gossip.GossipPacket) {
 					d.status = MAPPING
 					dronePos := msg.Rumor.Extra.SwarmInit.InitialPos
 					patternID := msg.Rumor.Extra.SwarmInit.PatternID
+					log.Printf("%s Start mapping", d.identifier)
 					target := d.targetsMapper.MapTargets(dronePos, msg.Rumor.Extra.SwarmInit.TargetPos)
 					targets := target
 					// targets, _ := d.consensusClient.ProposeTargets(d.gossiper, patternID, target)
 					d.target = targets[d.droneID]
 
 					d.status = GENERATING_PATH
+					log.Printf("%s Generate path", d.identifier)
 					chanPath := d.pathGenerator.GeneratePath(dronePos, targets)
 					pathsGenerated := <-chanPath
+					log.Printf("%s Propose path", d.identifier)
 					paths, _ := d.consensusClient.ProposePaths(d.gossiper, patternID, pathsGenerated)
 					d.path = paths[d.droneID]
 

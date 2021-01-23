@@ -160,7 +160,6 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 		// TODO: parse RUMOR and send appropriate message to the clients
 		// g.hub.wsBroadcast <- make([]byte, 10)
 	} else if msg.Private != nil {
-		log.Printf("Hanlde update location")
 		data := msg.Private.Data
 		message, err := json.Marshal(UpdateMessage{
 			DroneId:  data.DroneID,
@@ -171,7 +170,6 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 		}
 		g.drones[data.DroneID] = data.Location
 		g.hub.wsBroadcast <- message
-		log.Printf("Ended update location")
 	}
 }
 

@@ -18,11 +18,11 @@ type simulator struct {
 func NewSimulator(drone interface_drone) *simulator {
 	return &simulator{
 		drone: drone,
-		done:  make(chan struct{}),
 	}
 }
 
 func (s *simulator) launchSimulation(singleMoveTime int, refreshFrequency int, location r3.Vec, path []r3.Vec) <-chan struct{} {
+	s.done = make(chan struct{})
 	go func() {
 		sleepDuration := time.Duration(1000/refreshFrequency) * time.Millisecond
 		for _, move := range path {

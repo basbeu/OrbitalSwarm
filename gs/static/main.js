@@ -94,9 +94,9 @@ App.state = {
       App.state.locations = locations;
    },
    updateDrone: (droneId, location) => {
-      App.state.drones[droneId].location.x = location.X;
-      App.state.drones[droneId].location.y = location.Y;
-      App.state.drones[droneId].location.z = location.Z;
+      App.state.drones[droneId].position.x = location.X;
+      App.state.drones[droneId].position.y = location.Y;
+      App.state.drones[droneId].position.z = location.Z;
       App.state.locations[droneId] = location;
       // App.scene.data.scene.
    },
@@ -167,9 +167,10 @@ if (window["WebSocket"]) {
    });
 
    conn.onmessage = function (evt) {
-      console.log(evt.data);
-      const message = JSON.parse(evt.data);
-      handleMessage(message);
+      evt.data.split("\n").forEach((data) => {
+         const message = JSON.parse(data);
+         handleMessage(message);
+      });
    };
 } else {
    var item = document.createElement("div");
