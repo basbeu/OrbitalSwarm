@@ -6,12 +6,16 @@ import (
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
+type interface_drone interface {
+	UpdateLocation(r3.Vec)
+}
+
 type simulator struct {
-	drone *Drone
+	drone interface_drone
 	done  chan struct{}
 }
 
-func NewSimulator(drone *Drone) *simulator {
+func NewSimulator(drone interface_drone) *simulator {
 	return &simulator{
 		drone: drone,
 		done:  make(chan struct{}),
@@ -20,16 +24,15 @@ func NewSimulator(drone *Drone) *simulator {
 
 func (s *simulator) launchSimulation(singleMoveTime int, refreshFrequency int, location r3.Vec, path []r3.Vec) {
 	go func() {
-		currentLocation := location
 		sleepDuration := time.Duration(1000/refreshFrequency) * time.Millisecond
 		for _, move := range path {
 			stepMove := move.Scale(float64(singleMoveTime) / float64(refreshFrequency))
-			for step := 1; step < singleMoveTime*refreshFrequency; step++ {
+			for step := 1; step <= singleMoveTime*refreshFrequency; step++ {
 				time.Sleep(sleepDuration)
-				currentLocation = location.Add(stepMove.Scale(float64(step)))
-				s.drone.UpdateLocation(currentLocation)
+				tempLocation := location.Add(stepMove.Scale(float64(step)))
+				s.drone.UpdateLocation(tempLocation)
 			}
-			currentLocation = currentLocation.Add(move)
+			location = location.Add(move)
 		}
 		close(s.done)
 	}()

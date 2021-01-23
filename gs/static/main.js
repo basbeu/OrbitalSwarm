@@ -10,128 +10,145 @@ const moveUp = (drones, altitude) => {
    }));
 };
 
-let initScene = () => {
-   const scene = new THREE.Scene();
-   const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-   );
+const App = () => ({});
+App.scene = {
+   data: {},
+   init: () => {
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+         75,
+         window.innerWidth / window.innerHeight,
+         0.1,
+         1000
+      );
 
-   const renderer = new THREE.WebGLRenderer();
-   renderer.setSize(window.innerWidth, window.innerHeight);
-   document.getElementById("scene").appendChild(renderer.domElement);
-   // document.body.prepend(renderer.domElement);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.getElementById("scene").appendChild(renderer.domElement);
+      // document.body.prepend(renderer.domElement);
 
-   // controls
-   const controls = new OrbitControls(camera, renderer.domElement);
-   controls.minDistance = 20;
-   controls.maxDistance = 50;
-   controls.maxPolarAngle = Math.PI / 2;
-   controls.update();
-
-   // helper
-   scene.add(new THREE.AxesHelper(20));
-
-   // light
-   scene.add(new THREE.AmbientLight(0x222222));
-   const light = new THREE.PointLight(0xffffff, 1);
-   light.position.set(50, 50, 50);
-   scene.add(light);
-
-   camera.position.set(10, 10, 10);
-   camera.lookAt(new THREE.Vector3(0, 0, 0));
-   controls.update();
-
-   // Render
-   const animate = function () {
-      requestAnimationFrame(animate);
-
+      // controls
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.minDistance = 20;
+      controls.maxDistance = 50;
+      controls.maxPolarAngle = Math.PI / 2;
       controls.update();
 
-      renderer.render(scene, camera);
-   };
-   animate();
+      // helper
+      scene.add(new THREE.AxesHelper(20));
 
-   function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+      // light
+      scene.add(new THREE.AmbientLight(0x222222));
+      const light = new THREE.PointLight(0xffffff, 1);
+      light.position.set(50, 50, 50);
+      scene.add(light);
 
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.render(scene, camera);
-   }
+      camera.position.set(10, 10, 10);
+      camera.lookAt(new THREE.Vector3(0, 0, 0));
+      controls.update();
 
-   window.addEventListener("resize", onWindowResize, false);
-   return { scene, camera, drones: [], dronesLocation: [] };
-};
+      // Render
+      const animate = function () {
+         requestAnimationFrame(animate);
 
-// Create drones
-const createDrones = ({ scene }, dronesLocation) => {
-   const geometry = new THREE.ConeGeometry(0.5, 1, 32);
-   const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
-   const yOffset = 0.5;
+         controls.update();
 
-   // Create all objects
-   const drones = dronesLocation.map((l) => {
-      let drone = new THREE.Mesh(geometry, material);
-      drone.position.x = l.X;
-      drone.position.y = l.Y + yOffset;
-      drone.position.z = l.Z;
-      scene.add(drone);
-      return drone;
-   });
-
-   return drones;
-};
-
-const fakeDronesLocation = () => {
-   const drones = [];
-   const spacing = 3;
-   const nbDrones = 9;
-
-   for (let i = 0; i < nbDrones; ++i) {
-      let drone = {
-         x: (i % 3) * spacing,
-         y: 0,
-         z: Math.floor(i / 3) * spacing,
+         renderer.render(scene, camera);
       };
-      drones.push(drone);
-   }
-   return drones;
-};
+      animate();
 
-const App = () => ({});
-App.state = {
-   drones: [],
-   dronesLocation: [],
-   updateDrones: (drones, locations) => {
-      App.state.drones = drones;
-      App.state.dronesLocation = locations;
+      function onWindowResize() {
+         camera.aspect = window.innerWidth / window.innerHeight;
+         camera.updateProjectionMatrix();
+
+         renderer.setSize(window.innerWidth, window.innerHeight);
+         renderer.render(scene, camera);
+      }
+
+      window.addEventListener("resize", onWindowResize, false);
+      App.scene.data = { scene, camera };
    },
 };
 
-const handleMessage = (sceneData, message) => {
+App.state = {
+   drones: [],
+   locations: [],
+   createDrones: (locations) => {
+      const geometry = new THREE.ConeGeometry(0.5, 1, 32);
+      const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+      const yOffset = 0.5;
+
+      // Create all objects
+      App.state.drones = locations.map((l) => {
+         let drone = new THREE.Mesh(geometry, material);
+         drone.position.x = l.X;
+         drone.position.y = l.Y + yOffset;
+         drone.position.z = l.Z;
+         App.scene.data.scene.add(drone);
+         return drone;
+      });
+      App.state.locations = locations;
+   },
+   updateDrones: (drones, locations) => {
+      App.state.drones = drones;
+      App.state.locations = locations;
+   },
+   updateDrone: (droneId, location) => {
+      App.state.drones[droneId].location.x = location.X;
+      App.state.drones[droneId].location.y = location.Y;
+      App.state.drones[droneId].location.z = location.Z;
+      App.state.locations[droneId] = location;
+      // App.scene.data.scene.
+   },
+};
+
+App.ui = {
+   init: (send) => {
+      App.ui.updateStatus(true);
+      App.ui.updateNbDrones(0);
+      App.ui.updateIdentifier("Unknown");
+
+      const initial = document.getElementById("pattern-initial");
+      const up = document.getElementById("pattern-up");
+      const spherical = document.getElementById("pattern-spherical");
+
+      up.onclick = function () {
+         send({ Targets: moveUp(App.state.locations, 5) });
+         App.ui.updateStatus(false);
+      };
+      //TODO: Implement Spherical and initial
+   },
+   updateIdentifier: (identifier) => {
+      document.getElementById("identifier").innerHTML = identifier;
+   },
+   updateNbDrones: (nbDrones) => {
+      document.getElementById("nbDrone").innerHTML = nbDrones;
+   },
+   updateStatus: (ready) => {
+      document.getElementById("status").innerHTML = ready
+         ? "Waiting for order"
+         : "Running ...";
+      // TODO: disable buttons
+   },
+};
+
+const handleMessage = (message) => {
    if (message.Identifier != null) {
-      document.getElementById("identifier").innerHTML = message.Identifier;
+      App.ui.updateIdentifier(message.Identifier);
    }
 
    if (message.Drones != null && Array.isArray(message.Drones)) {
-      document.getElementById("nbDrone").innerHTML = message.Drones.length;
-      const drones = createDrones(sceneData, message.Drones);
-      App.state.updateDrones(drones, message.Drones);
+      App.ui.updateNbDrones(message.Drones.length);
+      App.state.createDrones(message.Drones);
    }
-};
 
-const uiHandlerSetup = (send) => {
-   const initial = document.getElementById("pattern-initial");
-   const up = document.getElementById("pattern-up");
-   const spherical = document.getElementById("pattern-spherical");
+   if (message.DroneId != null && message.Location != null) {
+      App.state.updateDrone(message.DroneId, message.Location);
+   }
 
-   up.onclick = function () {
-      send({ Targets: moveUp(App.state.dronesLocation, 5) });
-   };
-   //TODO: Implement Spherical and initial
+   if (message.Ready === true) {
+      App.ui.updateStatus(message.Ready);
+   }
 };
 
 // WebSocket
@@ -143,18 +160,17 @@ if (window["WebSocket"]) {
       console.log(item);
    };
 
-   const sceneData = initScene();
+   App.scene.init();
+   App.ui.init((data) => {
+      console.log("Send data", data);
+      conn.send(JSON.stringify(data));
+   });
 
    conn.onmessage = function (evt) {
       console.log(evt.data);
       const message = JSON.parse(evt.data);
-      handleMessage(sceneData, message);
+      handleMessage(message);
    };
-
-   uiHandlerSetup((data) => {
-      console.log("Send data", data);
-      conn.send(JSON.stringify(data));
-   });
 } else {
    var item = document.createElement("div");
    item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
