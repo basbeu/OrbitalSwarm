@@ -16,6 +16,9 @@ App.scene = {
       swapped: false,
    },
    init: () => {
+      const mainSlot = document.getElementById("scene");
+      const secondarySlot = document.getElementById("secondary-scene");
+
       const sceneReal = new THREE.Scene();
       const sceneSimu = new THREE.Scene();
       const cameraMain = new THREE.PerspectiveCamera(
@@ -33,13 +36,14 @@ App.scene = {
 
       const rendererMain = new THREE.WebGLRenderer();
       const rendererSecondary = new THREE.WebGLRenderer();
-
+      mainSlot.appendChild(rendererMain.domElement);
+      secondarySlot.appendChild(rendererSecondary.domElement);
       rendererMain.setSize(window.innerWidth, window.innerHeight);
-      rendererSecondary.setSize(window.innerWidth / 5, window.innerHeight / 5);
-      document.getElementById("scene").appendChild(rendererMain.domElement);
-      document
-         .getElementById("secondary-scene")
-         .appendChild(rendererSecondary.domElement);
+      rendererSecondary.setSize(
+         secondarySlot.clientWidth,
+         secondarySlot.clientWidth * (window.innerHeight / window.innerWidth)
+      );
+
       // document.body.prepend(renderer.domElement);
 
       // controls
@@ -98,7 +102,7 @@ App.scene = {
       };
       animate();
 
-      function onWindowResize() {
+      const onWindowResize = () => {
          cameraMain.aspect = window.innerWidth / window.innerHeight;
          cameraSecondary.aspect = window.innerWidth / window.innerHeight;
          cameraMain.updateProjectionMatrix();
@@ -108,14 +112,14 @@ App.scene = {
          rendererMain.render(sceneReal, cameraMain);
 
          rendererSecondary.setSize(
-            window.innerWidth / 5,
-            window.innerHeight / 5
+            secondarySlot.clientWidth,
+            secondarySlot.clientWidth * (window.innerHeight / window.innerWidth)
          );
          rendererSecondary.render(sceneSimu, cameraSecondary);
-      }
+      };
 
       window.addEventListener("resize", onWindowResize, false);
-      App.scene.data = { scene: sceneReal, camera: cameraMain };
+      App.scene.data = { sceneReal, sceneSimu };
    },
    swap: () => {
       App.scene.data.swapped = !App.scene.data.swapped;
@@ -127,29 +131,79 @@ App.state = {
    locations: [],
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
-      const material = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+      const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+      const materialSimu = new THREE.MeshLambertMaterial({ color: 0xff00ff });
       const yOffset = 0.5;
 
       // Create all objects
-      App.state.drones = locations.map((l) => {
-         let drone = new THREE.Mesh(geometry, material);
+      App.state.dronesReal = locations.map((l) => {
+         let drone = new THREE.Mesh(geometry, materialReal);
          drone.position.x = l.X;
          drone.position.y = l.Y + yOffset;
          drone.position.z = l.Z;
-         App.scene.data.scene.add(drone);
+         App.scene.data.sceneReal.add(drone);
+         return drone;
+      });
+      App.state.dronesSimu = locations.map((l) => {
+         let drone = new THREE.Mesh(geometry, materialSimu);
+         drone.position.x = l.X;
+         drone.position.y = l.Y + yOffset;
+         drone.position.z = l.Z;
+         App.scene.data.sceneSimu.add(drone);
          return drone;
       });
       App.state.locations = locations;
    },
-   updateDrones: (drones, locations) => {
-      App.state.drones = drones;
-      App.state.locations = locations;
+   startSimulation: (paths) => {
+      // 30fps -> 1s par step
+      const singleMoveTime = 1000;
+      const refreshFrequency = 30;
+      const waitingTime = singleMoveTime / refreshFrequency;
+
+      const animateSingleMove = (moves, done) => {
+         const singleStep = moves.map((p) => ({
+            X: p.X / refreshFrequency,
+            Y: p.Y / refreshFrequency,
+            Z: p.Z / refreshFrequency,
+         }));
+         console.log(singleStep);
+         const nextMove = (step) => {
+            for (let i = 0; i < moves.length; ++i) {
+               App.state.dronesSimu[i].position.x += singleStep[i].X;
+               App.state.dronesSimu[i].position.y += singleStep[i].Y;
+               App.state.dronesSimu[i].position.z += singleStep[i].Z;
+            }
+            step--;
+            if (step > 0) {
+               setTimeout(() => nextMove(step), waitingTime);
+            } else {
+               setTimeout(done, waitingTime);
+            }
+         };
+         nextMove(refreshFrequency);
+      };
+
+      const animatePath = (paths) => {
+         if (paths[0].length == 0) {
+            console.log("Simulation ended");
+            return;
+         }
+         const nextMoves = paths.map((p) => p[0]);
+         const remainingMoves = paths.map((p) => p.slice(1));
+         setTimeout(
+            () =>
+               animateSingleMove(nextMoves, () => animatePath(remainingMoves)),
+            waitingTime
+         );
+      };
+
+      console.log("Simulation started");
+      animatePath(paths);
    },
    updateDrone: (droneId, location) => {
-      App.state.drones[droneId].position.x = location.X;
-      App.state.drones[droneId].position.y = location.Y;
-      App.state.drones[droneId].position.z = location.Z;
-      App.state.locations[droneId] = location;
+      App.state.dronesReal[droneId].position.x = location.X;
+      App.state.dronesReal[droneId].position.y = location.Y;
+      App.state.dronesReal[droneId].position.z = location.Z;
    },
 };
 
@@ -163,7 +217,65 @@ App.ui = {
       const spherical = document.getElementById("pattern-spherical");
       //TODO: Implement Spherical and initial
 
-      document.getElementById("pattern-up").onclick = function () {
+      document.getElementById("pattern-initial").onclick = () => {
+         App.state.startSimulation([
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 0, Z: 1 },
+               { X: 1, Y: 0, Z: 0 },
+            ], // Drone 1
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+            [
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 0, Y: 1, Z: 0 },
+               { X: 1, Y: 0, Z: 0 },
+            ],
+         ]);
+      };
+      document.getElementById("pattern-up").onclick = () => {
          send({ Targets: moveUp(App.state.locations, 5) });
          App.ui.updateStatus(false);
       };
@@ -171,6 +283,13 @@ App.ui = {
       // Swap
       document.getElementById("swap").onclick = () => {
          App.scene.swap();
+         const swapped = App.scene.data.swapped;
+         document.getElementById("main-label").textContent = !swapped
+            ? "Live data"
+            : "Simulation";
+         document.getElementById("secondary-label").textContent = !swapped
+            ? "Simulation"
+            : "Live data";
       };
    },
    updateIdentifier: (identifier) => {

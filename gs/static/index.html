@@ -1,153 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
-   <head>
-      <meta charset="utf-8" />
-      <meta http-equiv="x-ua-compatible" content="ie=edge" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-      <title>CS438 - Orbital Swarm</title>
+<head>
+   <meta charset="utf-8" />
+   <meta http-equiv="x-ua-compatible" content="ie=edge" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-      <!-- Favicon -->
-      <link
-         rel="icon"
-         href="drone_light.svg"
-         sizes="any"
-         id="light-scheme-icon"
-      />
-      <link
-         rel="icon"
-         href="drone_dark.svg"
-         sizes="any"
-         id="dark-scheme-icon"
-      />
+   <title>CS438 - Orbital Swarm</title>
 
-      <!-- Switch favicon depending on color scheme choice -->
-      <script>
-         function onUpdate() {
-            if (matcher.matches) {
-               lightSchemeIcon.remove();
-               document.head.append(darkSchemeIcon);
-            } else {
-               document.head.append(lightSchemeIcon);
-               darkSchemeIcon.remove();
-            }
+   <!-- Favicon -->
+   <link rel="icon" href="drone_light.svg" sizes="any" id="light-scheme-icon" />
+   <link rel="icon" href="drone_dark.svg" sizes="any" id="dark-scheme-icon" />
+
+   <!-- Switch favicon depending on color scheme choice -->
+   <script>
+      function onUpdate() {
+         if (matcher.matches) {
+            lightSchemeIcon.remove();
+            document.head.append(darkSchemeIcon);
+         } else {
+            document.head.append(lightSchemeIcon);
+            darkSchemeIcon.remove();
          }
+      }
 
-         matcher = window.matchMedia("(prefers-color-scheme: dark)");
-         matcher.addListener(onUpdate);
+      matcher = window.matchMedia("(prefers-color-scheme: dark)");
+      matcher.addListener(onUpdate);
 
-         lightSchemeIcon = document.querySelector("link#light-scheme-icon");
-         darkSchemeIcon = document.querySelector("link#dark-scheme-icon");
+      lightSchemeIcon = document.querySelector("link#light-scheme-icon");
+      darkSchemeIcon = document.querySelector("link#dark-scheme-icon");
 
-         onUpdate();
-      </script>
+      onUpdate();
+   </script>
 
-      <!-- CSS only -->
-      <link
-         href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
-         rel="stylesheet"
-         integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1"
-         crossorigin="anonymous"
-      />
-      <!-- Main CSS -->
-      <link rel="stylesheet" href="main.css" />
+   <!-- CSS only -->
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous" />
+   <!-- Main CSS -->
+   <link rel="stylesheet" href="main.css" />
 
-      <!-- JavaScript Bundle with Popper -->
-      <script
-         src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
-         integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
-         crossorigin="anonymous"
-      ></script>
-      
-      <!-- VueJS -->
-      <!-- <script src="https://unpkg.com/vue@next"></script> -->
+   <!-- JavaScript Bundle with Popper -->
+   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+      crossorigin="anonymous"></script>
 
-      <!-- IndexJs -->
-      <script src="main.js" type="module"></script>
-   </head>
+   <!-- VueJS -->
+   <!-- <script src="https://unpkg.com/vue@next"></script> -->
 
-   <body class="text-light">
-      <div id="scene"></div>
-      <div class="container-fluid fixed-bottom">
-         <div class="row">
-            <div class="col-md-9"></div>
-            <div class="col-md-3">
-               <div class="card bg-dark">
-                  <div class="card-header bg-primary">
-                     <button class="btn btn-secondary" id="swap">Swap</button>
-                     <h5 class="card-title">Simulation</h5>
-                  </div>
-                  <div class="card-body" id="secondary-scene">
-                     Test
+   <!-- IndexJs -->
+   <script src="main.js" type="module"></script>
+</head>
+
+<body class="text-light">
+   <div id="scene"></div>
+   <div class="container-fluid fixed-top">
+      <!-- main box -->
+      <div class="row">
+         <div class="col-md-3">
+            <div class="card bg-dark">
+               <div class="card-header bg-primary">
+                  <h5 class="mb-1 mt-1">Informations</h5>
+               </div>
+               <div class="card-body">
+                  <div class="row top-buffer">
+                     <p>Identifier : <span id="identifier"></span></p>
+                     <p>Nb drones : <span id="nbDrone"></span></p>
+                     <p>Status : <span id="status"></span></p>
                   </div>
                </div>
             </div>
          </div>
-      </div>      
-      <div class="container-fluid fixed-top">
-         <h1 class="text-center">Orbital Swarm</h1>
-         <!-- main box -->
-         <div class="row">
-            <div class="col-md-3">
-               <div class="card bg-dark">
-                  <div class="card-header bg-primary">
-                     <h5 class="card-title">Informations</h5>
-                  </div>
-                  <div class="card-body">
-                     <div class="row top-buffer">
-                        <p>Identifier : <span id="identifier"></span></p>
-                        <p>Nb drones : <span id="nbDrone"></span></p>
-                        <p>Status : <span id="status"></span></p>
-                        <!-- <label for="identifier">List of Nodes</label>
-                        <ul class="nav-node list-group" id="nodebox">-->
-                           <!--<li class="list-group-item">-->
-                           <!--<p class="list-group-item-text">Node 1 address</p>-->
-                           <!--</li>-->
-                           <!--<li class="list-group-item">-->
-                           <!--<p class="list-group-item-text">Node 2 address</p>-->
-                           <!--</li>-->
-                        <!-- </ul> -->
-                        <!-- <form>
-                            <div class="form-group row">
-                                <input class="form-control" id="node" placeholder="Add new node...">
-                            </div>
-                            <button type="submit" id="submitnode" class="btn btn-primary">Add node</button>
-                        </form> -->
-                     </div>
-                  </div>
+         <div class="col-md-1"></div>
+         <div class="col-md-4">
+            <div class="card" style="background-color:black">
+               <div class="card-header text-primary">
+                  <h1 class="text-center">Orbital Swarm</h1>
                </div>
+               <h5 class="text-center" id="main-label">Live data</h5>
             </div>
-            <div class="col-md-6"></div>
-            <div class="col-md-3">
-               <div class="card bg-dark">
-                  <div class="card-header bg-primary">
-                     <h5>Actions</h5>
-                  </div>
-                  <div class="card-body">
-                     <div class="btn-toolbar">
-                        <div
-                           class="btn-group mr-2"
-                           style="margin-right: 2%; margin-bottom: 2%"
-                        >
-                           <button class="btn btn-light" id="pattern-initial">
-                              Start position
-                           </button>
-                        </div>
-                        <div class="btn-group mr-2" style="margin-bottom: 2%">
-                           <button class="btn btn-light" id="pattern-up">
-                             moveUp
-                           </button>
-                        </div>
-                        <div class="btn-group mr-2" style="margin-bottom: 2%">
-                           <button class="btn btn-light" id="pattern-spherical">
-                              Spherical pattern
-                           </button>
-                        </div>
+         </div>
+         <div class="col-md-1"></div>
+         <div class="col-md-3">
+            <div class="card bg-dark">
+               <div class="card-header bg-primary">
+                  <h5 class="mb-1 mt-1">Actions</h5>
+               </div>
+               <div class="card-body">
+                  <div class="btn-toolbar">
+                     <div class="btn-group mr-2" style="margin-right: 2%; margin-bottom: 2%">
+                        <button class="btn btn-light" id="pattern-initial">
+                           Start position
+                        </button>
+                     </div>
+                     <div class="btn-group mr-2" style="margin-bottom: 2%">
+                        <button class="btn btn-light" id="pattern-up">
+                           moveUp
+                        </button>
+                     </div>
+                     <div class="btn-group mr-2" style="margin-bottom: 2%">
+                        <button class="btn btn-light" id="pattern-spherical">
+                           Spherical pattern
+                        </button>
                      </div>
                   </div>
                </div>
             </div>
          </div>
       </div>
-   </body>
+   </div>
+   <div class="container-fluid fixed-bottom">
+      <div class="row">
+         <div class="col-md-9"></div>
+         <div class="col-md-3">
+            <div class="card bg-dark">
+               <div class="card-header bg-primary">
+                  <button class="btn btn-dark d-inline p-1" id="swap" title="Swap">
+                     <svg heigh="20px" width="20px" aria-hidden="true" focusable="false" data-prefix="fas"
+                        data-icon="retweet" class="svg-inline--fa fa-retweet fa-w-20" role="img"
+                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512">
+                        <path fill="white"
+                           d="M629.657 343.598L528.971 444.284c-9.373 9.372-24.568 9.372-33.941 0L394.343 343.598c-9.373-9.373-9.373-24.569 0-33.941l10.823-10.823c9.562-9.562 25.133-9.34 34.419.492L480 342.118V160H292.451a24.005 24.005 0 0 1-16.971-7.029l-16-16C244.361 121.851 255.069 96 276.451 96H520c13.255 0 24 10.745 24 24v222.118l40.416-42.792c9.285-9.831 24.856-10.054 34.419-.492l10.823 10.823c9.372 9.372 9.372 24.569-.001 33.941zm-265.138 15.431A23.999 23.999 0 0 0 347.548 352H160V169.881l40.416 42.792c9.286 9.831 24.856 10.054 34.419.491l10.822-10.822c9.373-9.373 9.373-24.569 0-33.941L144.971 67.716c-9.373-9.373-24.569-9.373-33.941 0L10.343 168.402c-9.373 9.373-9.373 24.569 0 33.941l10.822 10.822c9.562 9.562 25.133 9.34 34.419-.491L96 169.881V392c0 13.255 10.745 24 24 24h243.549c21.382 0 32.09-25.851 16.971-40.971l-16.001-16z">
+                        </path>
+                     </svg></button>
+                  <h5 class="card-title d-inline align-middle mb-0" id="secondary-label">Simulation</h5>
+               </div>
+               <div id="secondary-scene">
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</body>
+
 </html>
