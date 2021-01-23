@@ -27,8 +27,6 @@ const (
 	MOVING
 )
 
-// Drone is responsible to be the glue between the gossiping protocol and
-// the ui, dispatching responses and messages etc
 type Drone struct {
 	droneID uint32
 	status  state
@@ -44,9 +42,6 @@ type Drone struct {
 	simulator       *simulator
 }
 
-// NewDrone returns the controller that sets up the gossiping state machine
-// as well as the web routing. It uses the same gossiping address for the
-// identifier.
 func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient consensus.ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
 
 	d := &Drone{
