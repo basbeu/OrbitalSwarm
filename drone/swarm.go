@@ -18,7 +18,7 @@ type Swarm struct {
 }
 
 // NewSwarm creates and returns an new Swarm, but do not start the drones
-func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []r3.Vec) {
+func NewSwarm(numDrones, numPaxosDrone, firstUIPort, firstGossipPort, antiEntropy, routeTimer, paxosRetry int, baseUIAddress, baseGossipAddress string) (*Swarm, []r3.Vec) {
 	swarm := Swarm{
 		drones: make([]*Drone, numDrones),
 		stop:   make(chan struct{}),
@@ -57,7 +57,16 @@ func NewSwarm(numDrones, firstUIPort, firstGossipPort, antiEntropy, routeTimer, 
 		peers := make([]string, numDrones)
 		copy(peers, gossipAddresses)
 		peers = append(peers[:i], peers[i+1:]...)
-		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), consensus.NewConsensusParticipant(numDrones, i, paxosRetry), pathgenerator.NewGeneticPathGenerator())
+
+		var consensusCli consensus.ConsensusClient
+
+		if i < numPaxosDrone {
+			consensusCli = consensus.NewConsensusParticipant(numPaxosDrone, i, paxosRetry)
+		} else {
+			consensusCli = consensus.NewConsensusReader(numPaxosDrone, i, paxosRetry)
+		}
+
+		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), consensusCli, pathgenerator.NewGeneticPathGenerator())
 	}
 
 	return &swarm, positions

@@ -12,5 +12,7 @@ type ConsensusClient interface {
 	ProposePaths(g *gossip.Gossiper, patternID string, paths [][]r3.Vec) [][]r3.Vec
 
 	GetBlocks() (string, map[string]*blk.BlockContainer)
-	HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage)
+	HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer
+
+	IsProposer() bool
 }

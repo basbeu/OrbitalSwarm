@@ -110,10 +110,10 @@ func (c *ConsensusParticipant) GetBlocks() (string, map[string]*blk.BlockContain
 	return c.blockChain.GetBlocks()
 }
 
-func (c *ConsensusParticipant) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) {
+func (c *ConsensusParticipant) HandleExtraMessage(g *gossip.Gossiper, msg *extramessage.ExtraMessage) *blk.BlockContainer {
 	blockContainer := c.blockChain.HandleExtraMessage(g, msg)
 	if blockContainer == nil {
-		return
+		return nil
 	}
 
 	switch blockContainer.Type {
@@ -124,6 +124,7 @@ func (c *ConsensusParticipant) HandleExtraMessage(g *gossip.Gossiper, msg *extra
 		log.Printf("Received a path block")
 		c.handlePathBlock(blockContainer)
 	}
+	return blockContainer
 }
 
 func (c *ConsensusParticipant) handleMappingBlock(blockContainer *blk.BlockContainer) {
@@ -167,4 +168,8 @@ func (c *ConsensusParticipant) handlePathBlock(blockContainer *blk.BlockContaine
 		c.pendingPath = make([]*pathProposition, 0)
 		log.Printf("Quit path handle")
 	}
+}
+
+func (c *ConsensusParticipant) IsProposer() bool {
+	return true
 }
