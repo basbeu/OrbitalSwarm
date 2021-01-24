@@ -42,31 +42,32 @@ func main() {
 	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
-	// numParticipants := flag.Int("numParticipants", -1, "number of participants in the Paxos consensus box.")
-	numParticipants := 20
+	// numDrones := flag.Int("numDrones", -1, "number of participants in the Paxos consensus box.")
+	numDrones := 20
+	numPaxosProposerAcceptors := 5
 	paxosRetry := flag.Int("paxosRetry", defaultPaxosRetry, "number of seconds a Paxos proposer waits until retrying")
 
 	flag.Parse()
 
-	// if *numParticipants < 0 {
-	// 	Logger.Error().Msg("please specify a number of participants with --numParticipants")
+	// if *numDrones < 0 {
+	// 	Logger.Error().Msg("please specify a number of participants with --numDrones")
 	// 	return
 	// }
 
 	// Generate address for the groundStation
 	gossipAddress := ""
 	fac := gossip.GetFactory()
-	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, numParticipants)
+	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, numDrones)
 	if err != nil {
 		panic(err)
 	}
 
-	swarm, locations := drone.NewSwarm(numParticipants, 5, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
+	swarm, locations := drone.NewSwarm(numDrones, numPaxosProposerAcceptors, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
 
 	addresses := swarm.DronesAddresses()
 	g.AddAddresses(addresses...)
 
-	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations, consensus.NewConsensusReader(numParticipants, numParticipants+1, *paxosRetry))
+	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations, consensus.NewConsensusReader(numPaxosProposerAcceptors, numDrones+1, *paxosRetry))
 
 	go swarm.Run()
 	groundStation.Run()
