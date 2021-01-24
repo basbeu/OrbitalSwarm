@@ -2,13 +2,13 @@ import * as THREE from "https://unpkg.com/three@0.123/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/controls/OrbitControls.js";
 // import { moveUp } from "./patterns";
 
-const moveUp = (drones, altitude) => {
+const move = (drones, shift) => {
    return drones.map((d) => ({
-      X: d.X,
-      Y: d.Y + altitude,
-      Z: d.Z,
+      X: d.X + shift.X,
+      Y: Math.max(0,d.Y + shift.Y),
+      Z: d.Z + shift.Z,
    }));
-};
+}
 
 const App = () => ({});
 App.scene = {
@@ -220,6 +220,12 @@ App.ui = {
       App.ui.updateIdentifier("Unknown");
 
       const initial = document.getElementById("pattern-initial");
+      const up = document.getElementById("pattern-up");
+      const down = document.getElementById("pattern-down");
+      const xPlus = document.getElementById("pattern-x-plus");
+      const xMinus = document.getElementById("pattern-x-minus");
+      const zPlus = document.getElementById("pattern-z-plus");
+      const zMinus = document.getElementById("pattern-z-minus");
       const spherical = document.getElementById("pattern-spherical");
       //TODO: Implement Spherical and initial
 
@@ -227,8 +233,28 @@ App.ui = {
          send({ Targets: App.state.initialLocations});
          App.ui.updateStatus(false);
       };
-      document.getElementById("pattern-up").onclick = () => {
-         send({ Targets: moveUp(App.state.locations, 5) });
+      up.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:0, Y:5, Z:0}) });
+         App.ui.updateStatus(false);
+      };
+      down.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:0, Y:-5, Z:0}) });
+         App.ui.updateStatus(false);
+      };
+      xPlus.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:5, Y:0, Z:0}) });
+         App.ui.updateStatus(false);
+      };
+      xMinus.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:-5, Y:0, Z:0}) });
+         App.ui.updateStatus(false);
+      };
+      zPlus.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:0, Y:0, Z:5}) });
+         App.ui.updateStatus(false);
+      };
+      zMinus.onclick = () => {
+         send({ Targets: move(App.state.locations, {X:0, Y:0, Z:-5}) });
          App.ui.updateStatus(false);
       };
 
@@ -257,6 +283,11 @@ App.ui = {
 
       document.getElementById("pattern-initial").disabled = !ready;
       document.getElementById("pattern-up").disabled = !ready;
+      document.getElementById("pattern-down").disabled = !ready;
+      document.getElementById("pattern-x-plus").disabled = !ready;
+      document.getElementById("pattern-x-minus").disabled = !ready;
+      document.getElementById("pattern-z-plus").disabled = !ready;
+      document.getElementById("pattern-z-minus").disabled = !ready;
       document.getElementById("pattern-spherical").disabled = !ready;
    },
 };
