@@ -4,6 +4,7 @@ package drone
 
 import (
 	"strconv"
+	"sync"
 
 	"go.dedis.ch/cs438/orbitalswarm/paxos/blk"
 
@@ -40,6 +41,8 @@ type Drone struct {
 	targetsMapper   mapping.TargetsMapper
 	pathGenerator   pathgenerator.PathGenerator
 	simulator       *simulator
+
+	muxFly sync.Mutex
 }
 
 func NewDrone(droneID uint32, g *gossip.Gossiper, addresses []string, position r3.Vec, targetsMapper mapping.TargetsMapper, consensusClient consensus.ConsensusClient, pathGenerator pathgenerator.PathGenerator) *Drone {
@@ -143,8 +146,11 @@ func (d *Drone) generatePaths(patternID string, dronePos, targets []r3.Vec) {
 }
 
 func (d *Drone) fly() {
+	d.muxFly.Lock()
+	defer d.muxFly.Unlock()
+
 	if d.status != IDLE && d.status != MOVING {
-		log.Printf("Start simulation")
+		log.Printf(d.gossiper.GetIdentifier() + "Start simulation")
 		d.status = MOVING
 		done := d.simulator.launchSimulation(1, 4, d.position, d.path)
 		<-done
