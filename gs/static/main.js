@@ -204,8 +204,10 @@ App.state = {
       App.state.dronesReal[droneId].position.x = location.X;
       App.state.dronesReal[droneId].position.y = location.Y;
       App.state.dronesReal[droneId].position.z = location.Z;
+      App.state.locations[droneId] = location;
    },
 };
+
 
 App.ui = {
    init: (send) => {
