@@ -8,6 +8,10 @@ type TargetMessage struct {
 	Targets []r3.Vec
 }
 
+type SimulationMessage struct {
+	Paths [][]r3.Vec
+}
+
 type InitMessage struct {
 	Identifier string
 	Drones     []r3.Vec

@@ -3,9 +3,6 @@ package gossip
 // ========== CS-438 orbitalswarm Skeleton ===========
 
 import (
-	"fmt"
-	"strings"
-
 	"go.dedis.ch/cs438/orbitalswarm/extramessage"
 	"gonum.org/v1/gonum/spatial/r3"
 )
@@ -110,31 +107,6 @@ type PrivateMessage struct {
 	Data        PrivateMessageData `json:"data"`
 	Destination string             `json:"destination"`
 	HopLimit    int                `json:"hoplimit"`
-}
-
-// CallbackPacket describes the content of a callback
-type CallbackPacket struct {
-	Addr string
-	Msg  GossipPacket
-}
-
-func (c CallbackPacket) String() string {
-	res := new(strings.Builder)
-	res.WriteString("CallbackPacket: ")
-
-	fmt.Fprintf(res, "{ addr: %s ", c.Addr)
-	if c.Msg.Private != nil {
-		fmt.Fprintf(res, "Private: %v", *c.Msg.Private)
-	}
-	if c.Msg.Rumor != nil {
-		fmt.Fprintf(res, "Rumor: %v", *c.Msg.Rumor)
-	}
-	if c.Msg.Status != nil {
-		fmt.Fprintf(res, "Status: %v", *c.Msg.Status)
-	}
-	res.WriteString("} ")
-
-	return res.String()
 }
 
 // NewMessageCallback is the type of function that users of the library should
