@@ -18,9 +18,10 @@ import (
 )
 
 const defaultGossipAddr = "127.0.0.1:33000" // IP address:port number for gossiping
-const defaultName = "peerXYZ"               // Give a unique default name
 const defaultPaxosRetry = 1
 const defaultUIPort = "12000" // Default port number
+const defaultNumDrones = 20
+const defaultNumPaxosProposerAcceptors = 5
 
 var (
 	// defaultLevel can be changed to set the desired level of the logger
@@ -42,32 +43,27 @@ func main() {
 	UIPort := flag.String("UIPort", defaultUIPort, "port for gossip communication with peers")
 	antiEntropy := flag.Int("antiEntropy", 10, "timeout in seconds for anti-entropy (relevant only fo rPart2)' default value 10 seconds.")
 	routeTimer := flag.Int("rtimer", 0, "route rumors sending period in seconds, 0 to disable sending of route rumors (default)")
-	// numDrones := flag.Int("numDrones", -1, "number of participants in the Paxos consensus box.")
-	numDrones := 20
-	numPaxosProposerAcceptors := 5
 	paxosRetry := flag.Int("paxosRetry", defaultPaxosRetry, "number of seconds a Paxos proposer waits until retrying")
 
-	flag.Parse()
+	numDrones := flag.Int("numDrones", defaultNumDrones, "number of drones")
+	numPaxosProposerAcceptors := flag.Int("numProposer", defaultNumPaxosProposerAcceptors, "number of proposer/accpetor in the Paxos consensus box.")
 
-	// if *numDrones < 0 {
-	// 	Logger.Error().Msg("please specify a number of participants with --numDrones")
-	// 	return
-	// }
+	flag.Parse()
 
 	// Generate address for the groundStation
 	gossipAddress := ""
 	fac := gossip.GetFactory()
-	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, numDrones)
+	g, err := fac.New(gossipAddress, "GS", *antiEntropy, *routeTimer, *numDrones)
 	if err != nil {
 		panic(err)
 	}
 
-	swarm, locations := drone.NewSwarm(numDrones, numPaxosProposerAcceptors, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
+	swarm, locations := drone.NewSwarm(*numDrones, *numPaxosProposerAcceptors, 2222, 5000, *antiEntropy, *routeTimer, *paxosRetry, "127.0.0.1", "127.0.0.1")
 
 	addresses := swarm.DronesAddresses()
 	g.AddAddresses(addresses...)
 
-	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations, consensus.NewConsensusReader(numPaxosProposerAcceptors, numDrones+1, *paxosRetry))
+	groundStation := gs.NewGroundStation("GS", "127.0.0.1:"+*UIPort, gossipAddress, g, locations, consensus.NewConsensusReader(*numPaxosProposerAcceptors, *numDrones+1, *paxosRetry))
 
 	go swarm.Run()
 	groundStation.Run()
