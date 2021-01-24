@@ -129,6 +129,7 @@ App.scene = {
 App.state = {
    drones: [],
    locations: [],
+   initialLocations:[],
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
       const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
@@ -153,6 +154,9 @@ App.state = {
          return drone;
       });
       App.state.locations = locations;
+      App.state.initialLocations = locations.map((l) => {
+         return l
+      });
    },
    startSimulation: (paths) => {
       // 30fps -> 1s par step
@@ -219,63 +223,9 @@ App.ui = {
       const spherical = document.getElementById("pattern-spherical");
       //TODO: Implement Spherical and initial
 
-      document.getElementById("pattern-initial").onclick = () => {
-         App.state.startSimulation([
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 0, Z: 1 },
-               { X: 1, Y: 0, Z: 0 },
-            ], // Drone 1
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-            [
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 0, Y: 1, Z: 0 },
-               { X: 1, Y: 0, Z: 0 },
-            ],
-         ]);
+      initial.onclick = () => {
+         send({ Targets: App.state.initialLocations});
+         App.ui.updateStatus(false);
       };
       document.getElementById("pattern-up").onclick = () => {
          send({ Targets: moveUp(App.state.locations, 5) });
@@ -304,10 +254,10 @@ App.ui = {
       document.getElementById("status").innerHTML = ready
          ? "Waiting for order"
          : "Running ...";
-         
-      document.getElementById("pattern-initial").disabled = !ready
-      document.getElementById("pattern-up").disabled = !ready
-      document.getElementById("pattern-spherical").disabled = !ready
+
+      document.getElementById("pattern-initial").disabled = !ready;
+      document.getElementById("pattern-up").disabled = !ready;
+      document.getElementById("pattern-spherical").disabled = !ready;
    },
 };
 
