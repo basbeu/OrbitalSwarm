@@ -304,7 +304,10 @@ App.ui = {
       document.getElementById("status").innerHTML = ready
          ? "Waiting for order"
          : "Running ...";
-      // TODO: disable buttons
+         
+      document.getElementById("pattern-initial").disabled = !ready
+      document.getElementById("pattern-up").disabled = !ready
+      document.getElementById("pattern-spherical").disabled = !ready
    },
 };
 
