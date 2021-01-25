@@ -33,8 +33,8 @@ func (m *hungarianMapper) initMatrix(initials []r3.Vec, targets []r3.Vec) *mat.D
 
 	for i, drone := range initials {
 		for j, target := range targets {
-			dist := r3.Norm(drone.Sub(target))
-			matrix.Set(i, j, math.Floor(dist))
+			dist := math.Pow(r3.Norm(drone.Sub(target))+25, 2)
+			matrix.Set(i, j, dist)
 		}
 	}
 
