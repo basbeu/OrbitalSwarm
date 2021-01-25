@@ -42,9 +42,10 @@ type GroundStation struct {
 	cliConn       net.Conn
 	hub           *Hub
 
-	consensus consensus.ConsensusClient
-	patternID int
-	drones    []r3.Vec
+	consensus    consensus.ConsensusClient
+	patternID    int
+	drones       []r3.Vec
+	nextPosition []r3.Vec
 
 	running int
 	handler chan []byte
@@ -65,6 +66,7 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g *gossip.Gos
 		consensus: consensus,
 		patternID: 0,
 		drones:    drones,
+		running:   0,
 	}
 
 	g.RegisterCallback(gs.handleGossipMessage)
@@ -125,8 +127,6 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 		return nil
 	}
 
-	// switch v := m.(type) {
-	// case TargetMessage:
 	g.patternID++
 	log.Printf("Send swarmInit")
 	g.gossiper.AddExtraMessage(&extramessage.ExtraMessage{
@@ -136,15 +136,11 @@ func (g *GroundStation) handleWebSocketMessage(message []byte) []byte {
 			TargetPos:  m.Targets,
 		},
 	})
+	g.nextPosition = m.Targets
 	g.running = len(g.drones)
 
 	// Nothing to send back
 	return nil
-	// default:
-	// 	// TODO: some case for the other type of message which might come from the webSocket
-	// 	log.Printf("Unknown message send by the websocket")
-	// 	return nil
-	// }
 }
 
 // handleGossipMessage handle gossip messages
@@ -166,16 +162,17 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 		if msg.Rumor.Text != "" {
 			log.Printf(msg.Rumor.Text)
 			g.running--
-		}
-		if g.running == 0 {
-			message, _ := json.Marshal(ReadyMessage{
-				Ready: true,
-			})
-			g.hub.wsBroadcast <- message
+			if g.running == 0 {
+				message, _ := json.Marshal(ReadyMessage{
+					Ready: true,
+				})
+				g.hub.wsBroadcast <- message
+				g.drones = g.nextPosition
+			}
 		}
 		// TODO: parse RUMOR and send appropriate message to the clients
 		// g.hub.wsBroadcast <- make([]byte, 10)
-	} else if msg.Private != nil {
+	} else if msg.Private != nil && g.running > 0 {
 		data := msg.Private.Data
 		message, err := json.Marshal(UpdateMessage{
 			DroneId:  data.DroneID,
