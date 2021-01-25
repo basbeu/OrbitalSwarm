@@ -5,10 +5,10 @@ import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/contro
 const move = (drones, shift) => {
    return drones.map((d) => ({
       X: d.X + shift.X,
-      Y: Math.max(0,d.Y + shift.Y),
+      Y: Math.max(0, d.Y + shift.Y),
       Z: d.Z + shift.Z,
    }));
-}
+};
 
 const App = () => ({});
 App.scene = {
@@ -129,7 +129,8 @@ App.scene = {
 App.state = {
    drones: [],
    locations: [],
-   initialLocations:[],
+   initialLocations: [],
+   running: false,
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
       const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
@@ -155,7 +156,7 @@ App.state = {
       });
       App.state.locations = locations;
       App.state.initialLocations = locations.map((l) => {
-         return l
+         return l;
       });
    },
    startSimulation: (paths) => {
@@ -190,6 +191,9 @@ App.state = {
       const animatePath = (paths) => {
          if (paths[0].length == 0) {
             console.log("Simulation ended");
+            if (!App.state.running) {
+               App.state.synchWithSimulation();
+            }
             return;
          }
          const nextMoves = paths.map((p) => p[0]);
@@ -204,14 +208,28 @@ App.state = {
       console.log("Simulation started");
       animatePath(paths);
    },
+   synchWithSimulation: () => {
+      for (let i = 0; i < App.state.dronesReal.length; i++) {
+         App.state.dronesReal[i].position.x =
+            App.state.dronesSimu[i].position.x;
+         App.state.dronesReal[i].position.y =
+            App.state.dronesSimu[i].position.y;
+         App.state.dronesReal[i].position.z =
+            App.state.dronesSimu[i].position.z;
+      }
+      App.state.locations = App.state.dronesSimu.map((p) => ({
+         X: Math.round(p.position.x),
+         Y: Math.round(p.position.y - 0.5),
+         Z: Math.round(p.position.z),
+      }));
+   },
    updateDrone: (droneId, location) => {
       App.state.dronesReal[droneId].position.x = location.X;
-      App.state.dronesReal[droneId].position.y = location.Y;
+      App.state.dronesReal[droneId].position.y = location.Y + 0.5;
       App.state.dronesReal[droneId].position.z = location.Z;
       App.state.locations[droneId] = location;
    },
 };
-
 
 App.ui = {
    init: (send) => {
@@ -230,31 +248,31 @@ App.ui = {
       //TODO: Implement Spherical and initial
 
       initial.onclick = () => {
-         send({ Targets: App.state.initialLocations});
+         send({ Targets: App.state.initialLocations });
          App.ui.updateStatus(false);
       };
       up.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:0, Y:5, Z:0}) });
+         send({ Targets: move(App.state.locations, { X: 0, Y: 5, Z: 0 }) });
          App.ui.updateStatus(false);
       };
       down.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:0, Y:-5, Z:0}) });
+         send({ Targets: move(App.state.locations, { X: 0, Y: -5, Z: 0 }) });
          App.ui.updateStatus(false);
       };
       xPlus.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:5, Y:0, Z:0}) });
+         send({ Targets: move(App.state.locations, { X: 5, Y: 0, Z: 0 }) });
          App.ui.updateStatus(false);
       };
       xMinus.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:-5, Y:0, Z:0}) });
+         send({ Targets: move(App.state.locations, { X: -5, Y: 0, Z: 0 }) });
          App.ui.updateStatus(false);
       };
       zPlus.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:0, Y:0, Z:5}) });
+         send({ Targets: move(App.state.locations, { X: 0, Y: 0, Z: 5 }) });
          App.ui.updateStatus(false);
       };
       zMinus.onclick = () => {
-         send({ Targets: move(App.state.locations, {X:0, Y:0, Z:-5}) });
+         send({ Targets: move(App.state.locations, { X: 0, Y: 0, Z: -5 }) });
          App.ui.updateStatus(false);
       };
 
@@ -277,6 +295,7 @@ App.ui = {
       document.getElementById("nbDrone").innerHTML = nbDrones;
    },
    updateStatus: (ready) => {
+      App.state.running = !ready;
       document.getElementById("status").innerHTML = ready
          ? "Waiting for order"
          : "Running ...";
@@ -312,6 +331,7 @@ const handleMessage = (message) => {
 
    if (message.Ready === true) {
       App.ui.updateStatus(message.Ready);
+      App.state.synchWithSimulation();
    }
 };
 
