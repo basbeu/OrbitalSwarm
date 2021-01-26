@@ -21,11 +21,10 @@ func NewSimplePathGenerator() *SimplePathGenerator {
 func (g *SimplePathGenerator) GeneratePath(from []r3.Vec, dest []r3.Vec) <-chan [][]r3.Vec {
 	go func() {
 		paths := generateBasicPath(from, dest)
-		// if validatePaths(from, dest, paths) {
-		g.done <- paths
-		// } else {
-		// 	println("Basic path not correct")
+		// while !validatePaths(from, dest, paths) {
+		// 	//TODO: pseudo algo
 		// }
+		g.done <- paths
 	}()
 	return g.done
 }

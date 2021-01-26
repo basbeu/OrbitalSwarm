@@ -54,7 +54,9 @@ const App = () => {
 
       if (message.Ready === true) {
          App.ui.updateStatus(message.Ready);
-         App.state.synchWithSimulation();
+         if (!App.state.runningSimulation) {
+            App.state.synchWithSimulation();
+         }
       }
    };
 
@@ -205,6 +207,7 @@ App.state = {
    locations: [],
    initialLocations: [],
    running: false,
+   runningSimulation: false,
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
       const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
@@ -265,6 +268,7 @@ App.state = {
       const animatePath = (paths) => {
          if (paths[0].length == 0) {
             console.log("Simulation ended");
+            App.state.runningSimulation = false;
             if (!App.state.running) {
                App.state.synchWithSimulation();
             }
