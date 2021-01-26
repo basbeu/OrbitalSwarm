@@ -66,7 +66,7 @@ func NewSwarm(numDrones, numPaxosDrone, firstUIPort, firstGossipPort, antiEntrop
 			consensusCli = consensus.NewConsensusReader(numPaxosDrone, i, paxosRetry)
 		}
 
-		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), consensusCli, pathgenerator.NewGeneticPathGenerator())
+		swarm.drones[i] = NewDrone(uint32(i), g, peers, positions[i], mapping.NewHungarianMapper(), consensusCli, pathgenerator.NewSimplePathGenerator())
 	}
 
 	return &swarm, positions
