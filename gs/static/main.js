@@ -327,9 +327,12 @@ App.ui = {
       initial.onclick = () => {
          send({ Targets: App.state.initialLocations });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       spherical.onclick = () => {
          send({ targets: patternGenerator.sphere(App.state.locations, 1, 5) });
+         App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       up.onclick = () => {
          send({
@@ -340,6 +343,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       down.onclick = () => {
          send({
@@ -350,6 +354,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xPlus.onclick = () => {
          send({
@@ -360,6 +365,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xMinus.onclick = () => {
          send({
@@ -370,6 +376,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zPlus.onclick = () => {
          send({
@@ -380,6 +387,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zMinus.onclick = () => {
          send({
@@ -390,6 +398,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
 
       // Swap
