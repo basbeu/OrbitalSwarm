@@ -10,6 +10,27 @@ const patternGenerator = {
          Z: d.Z + shift.Z,
       }));
    },
+   sphere: (drones, altitude, radius) => {
+      const nbDrones = drones.length;
+      let indices = Array(nbDrones);
+      let i = 0;
+      while (i < nbDrones) indices[i] = i++ + 0.5;
+      const sqrt5 = Math.sqrt(5);
+      const angles = indices.map((i) => ({
+         phi: Math.acos(1 - (2 * i) / nbDrones),
+         theta: Math.PI * (1 + sqrt5 * i),
+      }));
+
+      const locations = angles.map(({ phi, theta }) => ({
+         X: Math.round(Math.cos(theta) * Math.sin(phi) * radius),
+         Y: Math.round(
+            (Math.sin(theta) * Math.sin(phi) + 1) * radius + altitude
+         ),
+         Z: Math.round(Math.cos(phi) * radius),
+      }));
+      console.log(locations);
+      return locations;
+   },
 };
 
 const App = () => {
@@ -298,11 +319,13 @@ App.ui = {
       const zPlus = document.getElementById("pattern-z-plus");
       const zMinus = document.getElementById("pattern-z-minus");
       const spherical = document.getElementById("pattern-spherical");
-      //TODO: Implement Spherical and initial
 
       initial.onclick = () => {
          send({ Targets: App.state.initialLocations });
          App.ui.updateStatus(false);
+      };
+      spherical.onclick = () => {
+         send({ targets: patternGenerator.sphere(App.state.locations, 1, 5) });
       };
       up.onclick = () => {
          send({

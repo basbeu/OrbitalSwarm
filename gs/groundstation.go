@@ -75,6 +75,7 @@ func NewGroundStation(identifier, uiAddress, gossipAddress string, g *gossip.Gos
 
 // Run Launch the groundstation
 func (g *GroundStation) Run() {
+	// Logger
 	logger := log.With().Timestamp().Str("role", "http proxy").Logger()
 
 	// Start gossiper
@@ -82,27 +83,23 @@ func (g *GroundStation) Run() {
 	go g.gossiper.Run(ready)
 	<-ready
 
-	nextRequestID := func() string {
-		return fmt.Sprintf("%d", time.Now().UnixNano())
-	}
+	// web sockets
 	g.hub = newHub(g.getInitialData, g.handleWebSocketMessage)
-
 	go g.hub.run()
 
-	// TODO: do we kkep the router ?
+	// Web interface
 	r := mux.NewRouter()
-
 	r.Methods("GET").Path("/ws").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		serveWs(g.hub, w, r)
 	})
-
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./gs/static/")))
-
+	nextRequestID := func() string {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
 	server := &http.Server{
 		Addr:    g.uiAddress,
 		Handler: tracing(nextRequestID)(logging(logger)(r)),
 	}
-
 	err := server.ListenAndServe()
 	if err != nil {
 		panic(err)
@@ -156,6 +153,13 @@ func (g *GroundStation) handleGossipMessage(origin string, msg gossip.GossipPack
 				message, _ := json.Marshal(SimulationMessage{
 					Paths: paths,
 				})
+				for i, path := range paths {
+					g.nextPosition[i] = g.drones[i]
+					for _, m := range path {
+						g.nextPosition[i] = g.nextPosition[i].Add(m)
+					}
+				}
+
 				g.hub.wsBroadcast <- message
 			}
 		}
