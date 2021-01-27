@@ -4,8 +4,6 @@
 
 package gs
 
-import "log"
-
 type wsMessage struct {
 	data   []byte
 	client *Client
@@ -68,7 +66,6 @@ func (h *Hub) run() {
 				}
 			}
 		case message := <-h.wsReceived:
-			log.Printf("Broad %s", message)
 			res := h.onMessageReceived(message.data)
 			if res != nil {
 				select {
