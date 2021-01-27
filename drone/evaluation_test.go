@@ -40,8 +40,12 @@ func createSwarmTest(i, numDrones, numParticipants, antiEntropy, routeTimer, pax
 }
 
 func TestAllDronesPaxosProposer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping testing in short mode")
+	}
+
 	trials := 10
-	drones := []int{5}
+	drones := []int{5, 7, 9, 13}
 	timings := make([][]int64, len(drones))
 	targetsPos := targetsPos(17)
 
@@ -98,77 +102,6 @@ func TestAllDronesPaxosProposer(t *testing.T) {
 	for trial := 0; trial < trials; trial++ {
 		var resultLine string
 		for config := 0; config < len(drones); config++ {
-			resultLine += fmt.Sprintf("%d;", timings[config][trial])
-		}
-
-		f.WriteString(resultLine + "\n")
-	}
-	f.Close()
-
-}
-
-func Test20DronesPaxos(t *testing.T) {
-	trials := 10
-	proposers := []int{3, 5, 7, 9}
-	numDrones := 20
-	timings := make([][]int64, len(proposers))
-	for i, numProposer := range proposers {
-		timings[i] = make([]int64, trials)
-		for j := 0; j < trials; j++ {
-			paxosRetry := 3
-			routeTimer := 0
-			antiEntropy := 10
-			//numDrones := 5
-
-			swarm, pos, g, consensus := createSwarmTest((j+1)*(numDrones+1), numDrones, numProposer, antiEntropy, routeTimer, paxosRetry)
-
-			targets := []r3.Vec{
-				r3.Vec{X: 0, Y: 10, Z: 0},
-				r3.Vec{X: 0, Y: 10, Z: 2},
-				r3.Vec{X: 2, Y: 10, Z: 0},
-				r3.Vec{X: 2, Y: 10, Z: 2},
-				r3.Vec{X: 4, Y: 10, Z: 2},
-			}
-
-			consensusReached := make(chan struct{})
-			g.RegisterCallback(func(origin string, msg gossip.GossipPacket) {
-				if msg.Rumor != nil && msg.Rumor.Extra != nil {
-					blockContainer := consensus.HandleExtraMessage(g, msg.Rumor.Extra)
-					if blockContainer != nil && blockContainer.Type == blk.BlockPathStr {
-						close(consensusReached)
-					}
-				}
-			})
-			start := time.Now()
-			g.AddExtraMessage(&extramessage.ExtraMessage{
-				SwarmInit: &extramessage.SwarmInit{
-					PatternID:  strconv.Itoa(j),
-					InitialPos: pos,
-					TargetPos:  targets[:numDrones],
-				},
-			})
-
-			<-consensusReached
-			timings[i][j] = time.Since(start).Nanoseconds()
-
-			swarm.Stop()
-			g.Stop()
-		}
-	}
-	fmt.Println(timings)
-	f, err := os.Create("20drones.txt")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	var header string
-	for _, drone := range proposers {
-		header += fmt.Sprintf("%d;", drone)
-	}
-	f.WriteString(header + "finish\n")
-	for trial := 0; trial < trials; trial++ {
-		var resultLine string
-		for config := 0; config < len(proposers); config++ {
 			resultLine += fmt.Sprintf("%d;", timings[config][trial])
 		}
 

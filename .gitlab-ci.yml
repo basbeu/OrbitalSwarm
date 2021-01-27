@@ -3,4 +3,5 @@ golang-1.14:
   stage: build
   script:
     - go build .
-    - go test ./... -v -p 1   
+    - go test ./... -v -p 1 -short
+  
