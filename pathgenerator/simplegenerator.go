@@ -3,6 +3,8 @@ package pathgenerator
 import (
 	"log"
 	"math"
+	"math/rand"
+	"time"
 
 	"gonum.org/v1/gonum/spatial/r3"
 )
@@ -12,6 +14,7 @@ type SimplePathGenerator struct {
 }
 
 func NewSimplePathGenerator() *SimplePathGenerator {
+	rand.Seed(time.Now().UnixNano())
 	g := &SimplePathGenerator{
 		done: make(chan [][]r3.Vec),
 	}
@@ -21,11 +24,13 @@ func NewSimplePathGenerator() *SimplePathGenerator {
 func (g *SimplePathGenerator) GeneratePath(from []r3.Vec, dest []r3.Vec) <-chan [][]r3.Vec {
 	go func() {
 		paths := generateBasicPath(from, dest)
-		// if validatePaths(from, dest, paths) {
+		for {
+			if validatePaths(from, dest, paths) {
+				break
+			}
+			paths = g.mix(paths)
+		}
 		g.done <- paths
-		// } else {
-		// 	println("Basic path not correct")
-		// }
 	}()
 	return g.done
 }
@@ -140,6 +145,13 @@ func generateBasicPath(from []r3.Vec, dest []r3.Vec) [][]r3.Vec {
 		}
 	}
 
+	return paths
+}
+
+func (p *SimplePathGenerator) mix(paths [][]r3.Vec) [][]r3.Vec {
+	for _, path := range paths {
+		rand.Shuffle(len(path), func(i, j int) { path[i], path[j] = path[j], path[i] })
+	}
 	return paths
 }
 

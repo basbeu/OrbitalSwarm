@@ -54,7 +54,9 @@ const App = () => {
 
       if (message.Ready === true) {
          App.ui.updateStatus(message.Ready);
-         App.state.synchWithSimulation();
+         if (!App.state.runningSimulation) {
+            App.state.synchWithSimulation();
+         }
       }
    };
 
@@ -205,6 +207,7 @@ App.state = {
    locations: [],
    initialLocations: [],
    running: false,
+   runningSimulation: false,
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
       const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
@@ -265,6 +268,7 @@ App.state = {
       const animatePath = (paths) => {
          if (paths[0].length == 0) {
             console.log("Simulation ended");
+            App.state.runningSimulation = false;
             if (!App.state.running) {
                App.state.synchWithSimulation();
             }
@@ -323,9 +327,12 @@ App.ui = {
       initial.onclick = () => {
          send({ Targets: App.state.initialLocations });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       spherical.onclick = () => {
          send({ targets: patternGenerator.sphere(App.state.locations, 1, 5) });
+         App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       up.onclick = () => {
          send({
@@ -336,6 +343,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       down.onclick = () => {
          send({
@@ -346,6 +354,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xPlus.onclick = () => {
          send({
@@ -356,6 +365,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xMinus.onclick = () => {
          send({
@@ -366,6 +376,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zPlus.onclick = () => {
          send({
@@ -376,6 +387,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zMinus.onclick = () => {
          send({
@@ -386,6 +398,7 @@ App.ui = {
             }),
          });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
 
       // Swap
