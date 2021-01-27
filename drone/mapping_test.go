@@ -17,7 +17,7 @@ func TestMapping(t *testing.T) {
 	antiEntropy := 10
 	numDrones := 5
 
-	swarm, pos := NewSwarm(numDrones, 2222, 5000, antiEntropy, routeTimer, paxosRetry, "127.0.0.1", "127.0.0.1")
+	swarm, pos := NewSwarm(numDrones, numDrones, 2222, 5000, antiEntropy, routeTimer, paxosRetry, "127.0.0.1", "127.0.0.1")
 
 	go swarm.Run()
 
