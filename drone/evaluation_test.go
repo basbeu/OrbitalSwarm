@@ -41,7 +41,7 @@ func createSwarmTest(i, numDrones, numParticipants, antiEntropy, routeTimer, pax
 
 func TestAllDronesPaxosProposer(t *testing.T) {
 	trials := 10
-	drones := []int{13}
+	drones := []int{5}
 	timings := make([][]int64, len(drones))
 	targetsPos := targetsPos(17)
 

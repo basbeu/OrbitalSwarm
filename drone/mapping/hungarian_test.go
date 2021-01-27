@@ -1,6 +1,7 @@
 package mapping
 
 import (
+	"fmt"
 	"testing"
 
 	"gonum.org/v1/gonum/mat"
@@ -26,6 +27,12 @@ func TestInitMatrix(t *testing.T) {
 		1, 2,
 	})
 
+	expectedMatrix.Add(expectedMatrix, mat.NewDense(2, 2, []float64{
+		25, 25,
+		25, 25,
+	}))
+	expectedMatrix.MulElem(expectedMatrix, expectedMatrix)
+
 	matrix := mapper.initMatrix(initialPos, targetPos)
 
 	require.True(t, mat.Equal(expectedMatrix, matrix))
@@ -46,9 +53,17 @@ func TestInitMatrix(t *testing.T) {
 		1, 2, 4,
 		2, 3, 4,
 	})
+	expectedMatrix.Add(expectedMatrix, mat.NewDense(3, 3, []float64{
+		25, 25, 25,
+		25, 25, 25,
+		25, 25, 25,
+	}))
+	expectedMatrix.MulElem(expectedMatrix, expectedMatrix)
 
 	matrix = mapper.initMatrix(initialPos, targetPos)
 
+	fmt.Println(matrix)
+	fmt.Println(expectedMatrix)
 	require.True(t, mat.Equal(expectedMatrix, matrix))
 }
 
@@ -135,6 +150,13 @@ func TestDecodeAssignement(t *testing.T) {
 		1, 2, 4,
 		2, 3, 4,
 	})
+
+	expectedMatrix.Add(expectedMatrix, mat.NewDense(3, 3, []float64{
+		25, 25, 25,
+		25, 25, 25,
+		25, 25, 25,
+	}))
+	expectedMatrix.MulElem(expectedMatrix, expectedMatrix)
 
 	matrix := mapper.initMatrix(initialPos, targetPos)
 
