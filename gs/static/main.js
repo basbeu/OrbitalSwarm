@@ -2,15 +2,91 @@ import * as THREE from "https://unpkg.com/three@0.123/build/three.module.js";
 import { OrbitControls } from "https://unpkg.com/three@0.123/examples/jsm/controls/OrbitControls.js";
 // import { moveUp } from "./patterns";
 
-const move = (drones, shift) => {
-   return drones.map((d) => ({
-      X: d.X + shift.X,
-      Y: Math.max(0, d.Y + shift.Y),
-      Z: d.Z + shift.Z,
-   }));
+const patternGenerator = {
+   move: (drones, shift) => {
+      return drones.map((d) => ({
+         X: d.X + shift.X,
+         Y: Math.max(0, d.Y + shift.Y),
+         Z: d.Z + shift.Z,
+      }));
+   },
+   sphere: (drones, altitude, radius) => {
+      const nbDrones = drones.length;
+      let indices = Array(nbDrones);
+      let i = 0;
+      while (i < nbDrones) indices[i] = i++ + 0.5;
+      const sqrt5 = Math.sqrt(5);
+      const angles = indices.map((i) => ({
+         phi: Math.acos(1 - (2 * i) / nbDrones),
+         theta: Math.PI * (1 + sqrt5 * i),
+      }));
+
+      const locations = angles.map(({ phi, theta }) => ({
+         X: Math.round(Math.cos(theta) * Math.sin(phi) * radius),
+         Y: Math.round(
+            (Math.sin(theta) * Math.sin(phi) + 1) * radius + altitude
+         ),
+         Z: Math.round(Math.cos(phi) * radius),
+      }));
+      console.log(locations);
+      return locations;
+   },
 };
 
-const App = () => ({});
+const App = () => {
+   const handleMessage = (message) => {
+      if (message.Identifier != null) {
+         App.ui.updateIdentifier(message.Identifier);
+      }
+
+      if (message.Paths != null) {
+         App.state.startSimulation(message.Paths);
+      }
+
+      if (message.Drones != null && Array.isArray(message.Drones)) {
+         App.ui.updateNbDrones(message.Drones.length);
+         App.state.createDrones(message.Drones);
+      }
+
+      if (message.DroneId != null && message.Location != null) {
+         App.state.updateDrone(message.DroneId, message.Location);
+      }
+
+      if (message.Ready === true) {
+         App.ui.updateStatus(message.Ready);
+         if (!App.state.runningSimulation) {
+            App.state.synchWithSimulation();
+         }
+      }
+   };
+
+   // WebSocket
+   if (window["WebSocket"]) {
+      let conn = new WebSocket("ws://" + document.location.host + "/ws");
+      conn.onclose = function (evt) {
+         var item = document.createElement("div");
+         item.innerHTML = "<b>Connection closed.</b>";
+         console.log("Closed connection :'(");
+      };
+
+      App.scene.init();
+      App.ui.init((data) => {
+         console.log("Send data", data);
+         console.log("Size : " + JSON.stringify(data).length);
+         conn.send(JSON.stringify(data));
+      });
+
+      conn.onmessage = function (evt) {
+         evt.data.split("\n").forEach((data) => {
+            const message = JSON.parse(data);
+            handleMessage(message);
+         });
+      };
+   } else {
+      var item = document.createElement("div");
+      item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+   }
+};
 App.scene = {
    data: {
       swapped: false,
@@ -131,6 +207,7 @@ App.state = {
    locations: [],
    initialLocations: [],
    running: false,
+   runningSimulation: false,
    createDrones: (locations) => {
       const geometry = new THREE.ConeGeometry(0.5, 1, 32);
       const materialReal = new THREE.MeshLambertMaterial({ color: 0xffff00 });
@@ -171,7 +248,7 @@ App.state = {
             Y: p.Y / refreshFrequency,
             Z: p.Z / refreshFrequency,
          }));
-         console.log(singleStep);
+
          const nextMove = (step) => {
             for (let i = 0; i < moves.length; ++i) {
                App.state.dronesSimu[i].position.x += singleStep[i].X;
@@ -191,6 +268,7 @@ App.state = {
       const animatePath = (paths) => {
          if (paths[0].length == 0) {
             console.log("Simulation ended");
+            App.state.runningSimulation = false;
             if (!App.state.running) {
                App.state.synchWithSimulation();
             }
@@ -245,35 +323,82 @@ App.ui = {
       const zPlus = document.getElementById("pattern-z-plus");
       const zMinus = document.getElementById("pattern-z-minus");
       const spherical = document.getElementById("pattern-spherical");
-      //TODO: Implement Spherical and initial
 
       initial.onclick = () => {
          send({ Targets: App.state.initialLocations });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
+      };
+      spherical.onclick = () => {
+         send({ targets: patternGenerator.sphere(App.state.locations, 1, 5) });
+         App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       up.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: 0, Y: 5, Z: 0 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: 0,
+               Y: 5,
+               Z: 0,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       down.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: 0, Y: -5, Z: 0 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: 0,
+               Y: -5,
+               Z: 0,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xPlus.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: 5, Y: 0, Z: 0 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: 5,
+               Y: 0,
+               Z: 0,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       xMinus.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: -5, Y: 0, Z: 0 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: -5,
+               Y: 0,
+               Z: 0,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zPlus.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: 0, Y: 0, Z: 5 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: 0,
+               Y: 0,
+               Z: 5,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
       zMinus.onclick = () => {
-         send({ Targets: move(App.state.locations, { X: 0, Y: 0, Z: -5 }) });
+         send({
+            Targets: patternGenerator.move(App.state.locations, {
+               X: 0,
+               Y: 0,
+               Z: -5,
+            }),
+         });
          App.ui.updateStatus(false);
+         App.state.runningSimulation = true;
       };
 
       // Swap
@@ -311,54 +436,4 @@ App.ui = {
    },
 };
 
-const handleMessage = (message) => {
-   if (message.Identifier != null) {
-      App.ui.updateIdentifier(message.Identifier);
-   }
-
-   if (message.Paths != null) {
-      App.state.startSimulation(message.Paths);
-   }
-
-   if (message.Drones != null && Array.isArray(message.Drones)) {
-      App.ui.updateNbDrones(message.Drones.length);
-      App.state.createDrones(message.Drones);
-   }
-
-   if (message.DroneId != null && message.Location != null) {
-      App.state.updateDrone(message.DroneId, message.Location);
-   }
-
-   if (message.Ready === true) {
-      App.ui.updateStatus(message.Ready);
-      App.state.synchWithSimulation();
-   }
-};
-
-// WebSocket
-if (window["WebSocket"]) {
-   let conn = new WebSocket("ws://" + document.location.host + "/ws");
-   conn.onclose = function (evt) {
-      var item = document.createElement("div");
-      item.innerHTML = "<b>Connection closed.</b>";
-      console.log("Closed connection :'(");
-   };
-
-   App.scene.init();
-   App.ui.init((data) => {
-      console.log("Send data", data);
-      console.log("Size : " + JSON.stringify(data).length);
-      conn.send(JSON.stringify(data));
-   });
-
-   conn.onmessage = function (evt) {
-      evt.data.split("\n").forEach((data) => {
-         const message = JSON.parse(data);
-         handleMessage(message);
-      });
-   };
-} else {
-   var item = document.createElement("div");
-   item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
-   console.log(item);
-}
+App();
