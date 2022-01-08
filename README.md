@@ -1,7 +1,7 @@
 # CS-438 OrbitalSwarm
 
 Orbital Swarm has been developped in the context of course CS-438 given at EPFL.
-It provide a distributed drone simulation.
+It provides a distributed drone simulation.
 
 To build and run the project. You need to have golang installed.
 The project has been developed and tested on go1.14.12 linux/amd64.
